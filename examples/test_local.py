@@ -6,13 +6,13 @@ from pathlib import Path
 from ipcam_checker import CameraConfig, Settings, check_cameras, setup_logging
 
 CAMERAS = [
-    CameraConfig(
-        name="Sony-182",
-        ip="192.168.2.182",
-        rtsp_port=554,
-        rtsp_url_main="/media/video1",
-        rtsp_url_sub="/media/video2",
-    ),
+    # CameraConfig(
+    #     name="Sony-182",
+    #     ip="192.168.2.182",
+    #     rtsp_port=554,
+    #     rtsp_url_main="/media/video1",
+    #     rtsp_url_sub="/media/video2",
+    # ),
     # CameraConfig(
     #     name="Sony-184",
     #     ip="192.168.2.184",
@@ -36,8 +36,9 @@ CAMERAS = [
         onvif_password="REDACTED",
         vapix_username="axisuser",
         vapix_password="REDACTED",
-        check_vapix=True,
+        check_vapix=False,
         check_snmp=True,
+        snmp_community_read="public"
     )#,
     # CameraConfig(
     #     name="ReoLinkFront",
@@ -64,8 +65,8 @@ SETTINGS = Settings(
     check_ping_enabled=True,
     check_rtsp_enabled=False,
     check_snapshot_enabled=False,
-    check_ports_enabled=False,
-    check_onvif_enabled=True,
+    check_ports_enabled=True,
+    check_onvif_enabled=False,
     check_vapix_enabled=True,
     check_snmp_enabled=True,
     ping_count=2,

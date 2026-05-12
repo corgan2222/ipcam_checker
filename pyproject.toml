@@ -30,10 +30,6 @@ loki = [
 onvif = [
     "onvif-zeep>=0.2.12",
 ]
-snmp = [
-    "puresnmp>=2.0",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/ipcam_checker"]
 
