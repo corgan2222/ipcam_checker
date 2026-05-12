@@ -6,17 +6,27 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import threading
+
 from ipcam_checker._ffmpeg import ensure_ffmpeg
+from ipcam_checker._logging import get_logger
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig, StreamResult
 
+_log = get_logger("rtsp")
 _ffprobe_path: Path | None = None
+_ffprobe_lock = threading.Lock()
 
 
 def _get_ffprobe_path(settings: Settings) -> Path:
     global _ffprobe_path
-    if _ffprobe_path is None:
-        _, _ffprobe_path = ensure_ffmpeg(settings.bin_dir)
+    if _ffprobe_path is not None:
+        return _ffprobe_path
+    with _ffprobe_lock:
+        if _ffprobe_path is None:  # re-check after acquiring lock
+            _log.info("ffmpeg.download.start", extra={"bin_dir": str(settings.bin_dir)})
+            _, _ffprobe_path = ensure_ffmpeg(settings.bin_dir)
+            _log.info("ffmpeg.download.done", extra={"ffprobe": str(_ffprobe_path)})
     return _ffprobe_path
 
 
@@ -29,6 +39,15 @@ def _build_rtsp_url(camera: CameraConfig, stream_path: str) -> str:
     return f"rtsp://{auth}{camera.ip}:{camera.rtsp_port}{stream_path}"
 
 
+def _safe_stream_label(camera: CameraConfig, stream_path: str) -> str:
+    """URL for logging — strips credentials."""
+    if stream_path.startswith("rtsp://"):
+        # mask user:pass@ if present
+        import re
+        return re.sub(r"rtsp://[^@]+@", "rtsp://<auth>@", stream_path)
+    return f"{camera.ip}:{camera.rtsp_port}{stream_path}"
+
+
 def _parse_fps(r_frame_rate: str) -> float | None:
     try:
         num, den = r_frame_rate.split("/")
@@ -38,6 +57,8 @@ def _parse_fps(r_frame_rate: str) -> float | None:
 
 
 def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> StreamResult:
+    label = _safe_stream_label(camera, stream_path)
+    _log.debug("rtsp.start", extra={"camera": camera.name, "ip": camera.ip, "stream": label})
     try:
         ffprobe = _get_ffprobe_path(settings)
         url = _build_rtsp_url(camera, stream_path)
@@ -57,12 +78,21 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=settings.rtsp_timeout_s + 5,
         )
+
         if proc.returncode != 0:
-            return StreamResult(ok=False, width=None, height=None, fps=None,
-                                codec=None, bitrate_kbps=None,
-                                error=proc.stderr.strip() or "ffprobe error")
+            err = proc.stderr.strip() or "ffprobe error"
+            _log.warning(
+                "rtsp.fail",
+                extra={"camera": camera.name, "ip": camera.ip, "stream": label, "error": err},
+            )
+            return StreamResult(
+                ok=False, width=None, height=None, fps=None,
+                codec=None, bitrate_kbps=None, error=err,
+            )
 
         data = json.loads(proc.stdout)
         video = next(
@@ -70,24 +100,60 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             None,
         )
         if video is None:
-            return StreamResult(ok=False, width=None, height=None, fps=None,
-                                codec=None, bitrate_kbps=None, error="no video stream found")
+            _log.warning(
+                "rtsp.no_video_stream",
+                extra={"camera": camera.name, "ip": camera.ip, "stream": label},
+            )
+            return StreamResult(
+                ok=False, width=None, height=None, fps=None,
+                codec=None, bitrate_kbps=None, error="no video stream found",
+            )
 
         bitrate_raw = video.get("bit_rate")
         bitrate_kbps = round(int(bitrate_raw) / 1024, 2) if bitrate_raw else None
+        fps = _parse_fps(video.get("r_frame_rate", ""))
+        width = video.get("width")
+        height = video.get("height")
+        codec = video.get("codec_name")
 
+        _log.info(
+            "rtsp.ok",
+            extra={
+                "camera": camera.name,
+                "ip": camera.ip,
+                "stream": label,
+                "resolution": f"{width}x{height}",
+                "fps": fps,
+                "codec": codec,
+                "bitrate_kbps": bitrate_kbps,
+            },
+        )
         return StreamResult(
-            ok=True,
-            width=video.get("width"),
-            height=video.get("height"),
-            fps=_parse_fps(video.get("r_frame_rate", "")),
-            codec=video.get("codec_name"),
-            bitrate_kbps=bitrate_kbps,
-            error=None,
+            ok=True, width=width, height=height, fps=fps,
+            codec=codec, bitrate_kbps=bitrate_kbps, error=None,
+        )
+
+    except subprocess.TimeoutExpired:
+        _log.warning(
+            "rtsp.timeout",
+            extra={"camera": camera.name, "ip": camera.ip, "stream": label,
+                   "timeout_s": settings.rtsp_timeout_s},
+        )
+        return StreamResult(
+            ok=False, width=None, height=None, fps=None,
+            codec=None, bitrate_kbps=None,
+            error=f"ffprobe timeout after {settings.rtsp_timeout_s}s",
         )
     except Exception as exc:
-        return StreamResult(ok=False, width=None, height=None, fps=None,
-                            codec=None, bitrate_kbps=None, error=str(exc))
+        _log.error(
+            "rtsp.exception",
+            extra={"camera": camera.name, "ip": camera.ip, "stream": label, "error": str(exc)},
+            exc_info=True,
+        )
+        return StreamResult(
+            ok=False, width=None, height=None, fps=None,
+            codec=None, bitrate_kbps=None, error=str(exc),
+        )
 
 
 async def check_rtsp(
