@@ -102,6 +102,14 @@ class SnmpVideoChannel(BaseModel):
     signal_status: str | None = None  # "signalOk", "noSignal"
 
 
+class SnmpStorageEntry(BaseModel):
+    index: int
+    descr: str | None = None
+    storage_type: str | None = None   # "ram", "virtualMemory", "fixedDisk", "flashMemory", …
+    total_mb: float | None = None
+    used_mb: float | None = None
+
+
 class SnmpResult(BaseModel):
     ok: bool
     sys_descr: str | None = None
@@ -109,6 +117,8 @@ class SnmpResult(BaseModel):
     uptime_s: int | None = None
     temp_sensors: list[SnmpTempSensor] = Field(default_factory=list)
     video_channels: list[SnmpVideoChannel] = Field(default_factory=list)
+    cpu_loads: list[int] = Field(default_factory=list)      # per-CPU load % (0-100)
+    storage: list[SnmpStorageEntry] = Field(default_factory=list)
     error: str | None = None
 
 

@@ -196,6 +196,9 @@ def _fmt(result) -> str:
         lines.append(f"  snmp:    OK{name}{uptime}")
         if snmp.sys_descr:
             lines.append(f"           descr: {snmp.sys_descr[:80]}")
+        if snmp.cpu_loads:
+            cpu_parts = [f"cpu{i}={v}%" for i, v in enumerate(snmp.cpu_loads)]
+            lines.append(f"           cpu:  {'  '.join(cpu_parts)}")
         if snmp.temp_sensors:
             temp_parts = [
                 f"{s.sensor_type or s.sensor_id}={s.celsius}°C({s.status})"
@@ -206,6 +209,14 @@ def _fmt(result) -> str:
         if snmp.video_channels:
             ch_parts = [f"ch{c.channel_id}={c.signal_status}" for c in snmp.video_channels]
             lines.append(f"           video: {'  '.join(ch_parts)}")
+        if snmp.storage:
+            for s in snmp.storage:
+                if s.total_mb and s.total_mb > 0:
+                    used_pct = f"  {round(s.used_mb / s.total_mb * 100)}%" if s.used_mb is not None else ""
+                    lines.append(
+                        f"           store: [{s.storage_type or '?'}] {s.descr or ''}  "
+                        f"{s.used_mb}/{s.total_mb} MB{used_pct}"
+                    )
 
     return "\n".join(lines)
 

@@ -10,6 +10,7 @@ from ipcam_checker.config import Settings
 from ipcam_checker.models import (
     CameraConfig,
     SnmpResult,
+    SnmpStorageEntry,
     SnmpTempSensor,
     SnmpVideoChannel,
 )
@@ -28,6 +29,22 @@ _OID_VIDEO_TABLE = "1.3.6.1.4.1.368.4.1.4.1"  # axisVideoChannelEntry
 _TEMP_TYPE_MAP   = {1: "common", 2: "housing", 3: "rack", 4: "cpu"}
 _TEMP_STATUS_MAP = {1: "ok", 2: "failure", 3: "outOfBoundary"}
 _SIGNAL_MAP      = {1: "signalOk", 2: "noSignal"}
+
+# HOST-RESOURCES-MIB (RFC 2790)
+_OID_HR_STORAGE   = "1.3.6.1.2.1.25.2.3.1"    # hrStorageEntry
+_OID_HR_PROCESSOR = "1.3.6.1.2.1.25.3.3.1"    # hrProcessorEntry
+
+# hrStorageType OID → human label (last arc of the type OID)
+_HR_STORAGE_TYPE: dict[str, str] = {
+    "1.3.6.1.2.1.25.2.1.1": "other",
+    "1.3.6.1.2.1.25.2.1.2": "ram",
+    "1.3.6.1.2.1.25.2.1.3": "virtualMemory",
+    "1.3.6.1.2.1.25.2.1.4": "fixedDisk",
+    "1.3.6.1.2.1.25.2.1.5": "removableDisk",
+    "1.3.6.1.2.1.25.2.1.8": "ramDisk",
+    "1.3.6.1.2.1.25.2.1.9": "flashMemory",
+    "1.3.6.1.2.1.25.2.1.10": "networkDisk",
+}
 
 
 # ── BER encoder ──────────────────────────────────────────────────────────────
@@ -272,8 +289,9 @@ def _snmp_worker(ip: str, community: str, port: int, timeout: float) -> SnmpResu
 
         temp_sensors: list[SnmpTempSensor] = []
         for row_idx, cols in temp_rows.items():
+            # Use SNMP row index as sensor_id — cameras often report id=1 for all rows
             try:
-                sensor_id = int(str(cols.get(2, row_idx.split(".")[0])))
+                sensor_id = int(row_idx.split(".")[0])
             except (ValueError, TypeError):
                 sensor_id = 0
             type_int   = cols.get(1)
@@ -296,15 +314,62 @@ def _snmp_worker(ip: str, community: str, port: int, timeout: float) -> SnmpResu
 
         video_channels: list[SnmpVideoChannel] = []
         for row_idx, cols in video_rows.items():
-            ch_raw  = cols.get(1)
             sig_raw = cols.get(2)
             try:
-                channel_id = int(ch_raw) if isinstance(ch_raw, int) else int(row_idx.split(".")[0])
+                channel_id = int(row_idx.split(".")[0])
             except (ValueError, TypeError):
                 channel_id = 0
             video_channels.append(SnmpVideoChannel(
                 channel_id=channel_id,
                 signal_status=_SIGNAL_MAP.get(int(sig_raw)) if isinstance(sig_raw, int) else None,
+            ))
+
+        # ── CPU load (hrProcessorEntry, col 2 = hrProcessorLoad) ──
+        cpu_loads: list[int] = []
+        for oid, val in _walk_table(sock, ip, port, community, _OID_HR_PROCESSOR, req_id + 3):
+            suffix = oid[len(_OID_HR_PROCESSOR) + 1:]
+            col_s, _, _ = suffix.partition(".")
+            if col_s == "2" and isinstance(val, int):   # col 2 = hrProcessorLoad
+                cpu_loads.append(val)
+
+        # ── storage table (hrStorageEntry) ──
+        storage_rows: dict[str, dict[int, object]] = {}
+        for oid, val in _walk_table(sock, ip, port, community, _OID_HR_STORAGE, req_id + 4):
+            suffix = oid[len(_OID_HR_STORAGE) + 1:]
+            col_s, _, row_idx = suffix.partition(".")
+            if col_s.isdigit():
+                storage_rows.setdefault(row_idx, {})[int(col_s)] = val
+
+        storage: list[SnmpStorageEntry] = []
+        for row_idx, cols in storage_rows.items():
+            try:
+                idx = int(row_idx.split(".")[0])
+            except (ValueError, TypeError):
+                idx = 0
+            type_oid   = cols.get(2)   # OID → storage type label
+            descr      = cols.get(3)   # string
+            alloc_u    = cols.get(4)   # bytes per allocation unit
+            size_u     = cols.get(5)   # total units
+            used_u     = cols.get(6)   # used units
+
+            if isinstance(descr, (bytes, bytearray)):
+                descr = descr.decode("utf-8", errors="replace")
+
+            total_mb: float | None = None
+            used_mb: float | None = None
+            if isinstance(alloc_u, int) and isinstance(size_u, int) and size_u > 0:
+                total_mb = round(alloc_u * size_u / (1024 * 1024), 1)
+            if isinstance(alloc_u, int) and isinstance(used_u, int):
+                used_mb = round(alloc_u * used_u / (1024 * 1024), 1)
+
+            storage_type = _HR_STORAGE_TYPE.get(str(type_oid)) if type_oid else None
+
+            storage.append(SnmpStorageEntry(
+                index=idx,
+                descr=str(descr).strip() if descr else None,
+                storage_type=storage_type,
+                total_mb=total_mb,
+                used_mb=used_mb,
             ))
 
         return SnmpResult(
@@ -314,6 +379,8 @@ def _snmp_worker(ip: str, community: str, port: int, timeout: float) -> SnmpResu
             uptime_s=uptime_s,
             temp_sensors=temp_sensors,
             video_channels=video_channels,
+            cpu_loads=cpu_loads,
+            storage=storage,
         )
 
     except OSError as exc:
