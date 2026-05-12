@@ -102,6 +102,59 @@ def _compute_bitrate_kbps(data: dict) -> float | None:
     return None
 
 
+def _compute_rtp_stats(packets: list[dict], fps: float | None) -> dict:
+    """Compute RTP transport stats from ffprobe packet data."""
+    times = []
+    for p in packets:
+        for key in ("dts_time", "pts_time"):
+            v = p.get(key)
+            if v not in (None, "", "N/A"):
+                try:
+                    times.append(float(v))
+                    break
+                except ValueError:
+                    pass
+
+    packets_received = len(packets)
+    result: dict = {
+        "packets_received": packets_received,
+        "packets_lost": None,
+        "loss_percent": None,
+        "jitter_avg_ms": None,
+        "jitter_max_ms": None,
+        "bitrate_avg_kbps": None,
+    }
+
+    if len(times) < 2:
+        return result
+
+    duration = times[-1] - times[0]
+
+    # bitrate from packet sizes
+    total_bits = sum(int(p.get("size", 0)) * 8 for p in packets)
+    if duration > 0:
+        result["bitrate_avg_kbps"] = round(total_bits / duration / 1024, 2)
+
+    # jitter: deviation of inter-arrival times from expected interval
+    if fps and fps > 0:
+        expected_ms = 1000.0 / fps
+        intervals_ms = [(times[i + 1] - times[i]) * 1000 for i in range(len(times) - 1)]
+        deviations = [abs(iv - expected_ms) for iv in intervals_ms]
+        if deviations:
+            result["jitter_avg_ms"] = round(sum(deviations) / len(deviations), 3)
+            result["jitter_max_ms"] = round(max(deviations), 3)
+
+        # estimated loss: expected frames vs received
+        if duration > 0:
+            expected = fps * duration
+            lost = max(0, round(expected - packets_received))
+            total = packets_received + lost
+            result["packets_lost"] = lost
+            result["loss_percent"] = round(lost / total * 100, 2) if total > 0 else 0.0
+
+    return result
+
+
 def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> StreamResult:
     label = _safe_stream_label(camera, stream_path)
     _log.debug("rtsp.start", extra={"camera": camera.name, "ip": camera.ip, "stream": label})
@@ -160,8 +213,9 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
                 codec=None, bitrate_kbps=None, error="no video stream found",
             )
 
-        bitrate_kbps = _compute_bitrate_kbps(data)
         fps = _best_fps(video)
+        bitrate_kbps = _compute_bitrate_kbps(data)
+        rtp = _compute_rtp_stats(data.get("packets", []), fps)
         width = video.get("width")
         height = video.get("height")
         codec = video.get("codec_name")
@@ -194,6 +248,7 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
                 "bitrate_kbps": bitrate_kbps,
                 "title": title,
                 "probe_score": probe_score,
+                **rtp,
             },
         )
         return StreamResult(
@@ -201,6 +256,12 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             codec=codec, profile=profile, pix_fmt=pix_fmt, level=level,
             audio_codec=audio_codec, bitrate_kbps=bitrate_kbps,
             title=title, comment=comment, probe_score=probe_score,
+            packets_received=rtp["packets_received"],
+            packets_lost=rtp["packets_lost"],
+            loss_percent=rtp["loss_percent"],
+            jitter_avg_ms=rtp["jitter_avg_ms"],
+            jitter_max_ms=rtp["jitter_max_ms"],
+            bitrate_avg_kbps=rtp["bitrate_avg_kbps"],
             error=None,
         )
 

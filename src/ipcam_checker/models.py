@@ -39,6 +39,16 @@ class StreamResult(BaseModel):
     title: str | None = None
     comment: str | None = None
     probe_score: int | None = None
+    # RTP transport stats (computed from packet data)
+    packets_received: int | None = None
+    packets_lost: int | None = None
+    loss_percent: float | None = None
+    jitter_avg_ms: float | None = None
+    jitter_max_ms: float | None = None
+    bitrate_avg_kbps: float | None = None
+    # RTCP-derived stats (requires Sender Report parsing — not available via ffprobe JSON)
+    clock_drift_status: str | None = None
+    clock_drift_ms_per_min: float | None = None
     error: str | None
 
 
