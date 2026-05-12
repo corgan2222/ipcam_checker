@@ -118,10 +118,7 @@ def _fmt(result) -> str:
 
     if result.port_results:
         open_ports = [r for r in result.port_results if r.open]
-        closed_ports = [r for r in result.port_results if not r.open]
         parts = [f"{r.port}/{r.protocol}" for r in open_ports]
-        if closed_ports:
-            parts += [f"{r.port}/{r.protocol}:closed" for r in closed_ports]
         lines.append(f"  ports:   {('  '.join(parts)) if parts else 'none open'}")
 
     return "\n".join(lines)
