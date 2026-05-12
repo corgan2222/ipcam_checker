@@ -40,6 +40,13 @@ CAMERAS = [
         rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_sub",
     ),
     CameraConfig(
+        name="ReoLinkFront-test",
+        ip="192.168.2.53",
+        rtsp_url_main="/h264Preview_01_main",
+        rtsp_username="test",
+        rtsp_password="test",
+    ),
+    CameraConfig(
         name="FrontOld",
         ip="192.168.2.50",
         rtsp_url_main=None,
