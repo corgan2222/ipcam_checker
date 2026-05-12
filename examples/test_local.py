@@ -55,13 +55,16 @@ CAMERAS = [
 ]
 
 SETTINGS = Settings(
+    check_ping_enabled=True,
+    check_rtsp_enabled=True,
+    check_snapshot_enabled=False,
+    check_ports_enabled=True,
     ping_count=2,
     ping_timeout_s=1.0,
     rtsp_timeout_s=4.0,
     ffprobe_analyze_duration_s=3.0,
     max_concurrent_cameras=10,
     snapshot_rtsp_fallback=False,
-    port_scan_enabled=True,
     log_level="DEBUG",
     log_file=Path("logs/ipcam_test.log"),
 )
@@ -73,10 +76,15 @@ def _fmt(result) -> str:
         f"\n{'='*50}",
         f"  {result.name}  ({result.ip})",
         f"{'='*50}",
-        f"  ping:    {'OK' if ping.ok else 'FAIL'}  "
-        f"latency={ping.latency_ms}ms  loss={ping.packet_loss_percent}%"
-        + (f"  err={ping.error}" if not ping.ok else ""),
     ]
+    if ping is None:
+        lines.append("  ping:    disabled")
+    else:
+        lines.append(
+            f"  ping:    {'OK' if ping.ok else 'FAIL'}  "
+            f"latency={ping.latency_ms}ms  loss={ping.packet_loss_percent}%"
+            + (f"  err={ping.error}" if not ping.ok else "")
+        )
 
     for label, stream in [("main", result.main_stream), ("sub ", result.sub_stream)]:
         if stream is None:

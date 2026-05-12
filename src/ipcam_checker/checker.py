@@ -36,29 +36,39 @@ async def check_camera(
     _log.info("camera.start", extra={"camera": camera.name, "ip": camera.ip})
 
     with ThreadPoolExecutor(max_workers=settings.thread_pool_size) as executor:
-        ping = await check_ping(camera.ip, settings, executor)
+        ping = (
+            await check_ping(camera.ip, settings, executor)
+            if settings.check_ping_enabled else None
+        )
 
         main_stream = None
         sub_stream = None
         snapshot_base64 = None
-
         port_results = []
-        if ping.ok:
+
+        # Run remaining checks when ping is disabled (unknown) or succeeded
+        run_checks = (ping is None) or ping.ok
+        if run_checks:
             main_coro = (
                 check_rtsp(camera, camera.rtsp_url_main, settings, executor)
-                if camera.rtsp_url_main else _resolved(None)
+                if (settings.check_rtsp_enabled and camera.rtsp_url_main) else _resolved(None)
             )
             sub_coro = (
                 check_rtsp(camera, camera.rtsp_url_sub, settings, executor)
-                if camera.rtsp_url_sub else _resolved(None)
+                if (settings.check_rtsp_enabled and camera.rtsp_url_sub) else _resolved(None)
             )
-            port_coro = scan_ports(camera.ip, settings) if settings.port_scan_enabled else _resolved([])
+            snap_coro = (
+                check_snapshot(camera, settings, executor)
+                if settings.check_snapshot_enabled else _resolved(None)
+            )
+            port_coro = (
+                scan_ports(camera.ip, settings)
+                if settings.check_ports_enabled else _resolved([])
+            )
             main_stream, sub_stream, snapshot_base64, port_results = await asyncio.gather(
-                main_coro, sub_coro,
-                check_snapshot(camera, settings, executor),
-                port_coro,
+                main_coro, sub_coro, snap_coro, port_coro,
             )
-        else:
+        elif ping is not None and not ping.ok:
             _log.info(
                 "camera.skip_checks",
                 extra={"camera": camera.name, "ip": camera.ip, "reason": "ping failed"},
@@ -76,7 +86,7 @@ async def check_camera(
             plugin_results={},
         )
 
-        if plugins and ping.ok:
+        if plugins and run_checks:
             plugin_tasks = [
                 asyncio.create_task(_run_plugin(p, camera, result, executor, settings))
                 for p in plugins
@@ -101,7 +111,7 @@ async def check_camera(
             "camera": camera.name,
             "ip": camera.ip,
             "duration_ms": duration_ms,
-            "ping_ok": ping.ok,
+            "ping_ok": ping.ok if ping is not None else None,
             "main_ok": main_stream.ok if main_stream else None,
             "sub_ok": sub_stream.ok if sub_stream else None,
             "snapshot_ok": snapshot_base64 is not None,

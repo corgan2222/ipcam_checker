@@ -12,3 +12,4 @@ __pycache__/
 .code-review-graph/
 *.pyc
 logs/
+docs/superpowers/

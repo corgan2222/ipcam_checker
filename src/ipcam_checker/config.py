@@ -7,6 +7,12 @@ from pydantic import BaseModel, Field
 
 
 class Settings(BaseModel):
+    # Check toggles
+    check_ping_enabled: bool = True
+    check_rtsp_enabled: bool = True
+    check_snapshot_enabled: bool = True
+    check_ports_enabled: bool = False
+
     # Ping
     ping_count: int = 4
     ping_timeout_s: float = 2.0
@@ -23,8 +29,7 @@ class Settings(BaseModel):
     snapshot_rtsp_fallback: bool = True  # grab frame via ffmpeg when no snapshot_url
 
     # Port scan
-    port_scan_enabled: bool = False
-    port_scan_tcp_ports: list[int] = Field(default_factory=lambda: [80, 443, 8443, 8000])
+    port_scan_tcp_ports: list[int] = Field(default_factory=lambda: [80, 443, 554, 8000, 8443])
     port_scan_udp_ports: list[int] = Field(default_factory=lambda: [161])
     port_scan_timeout_s: float = 2.0
 

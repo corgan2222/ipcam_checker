@@ -64,7 +64,7 @@ class CameraResult(BaseModel):
     name: str
     ip: str
     checked_at: datetime
-    ping: PingResult
+    ping: PingResult | None
     main_stream: StreamResult | None
     sub_stream: StreamResult | None
     snapshot_base64: str | None
