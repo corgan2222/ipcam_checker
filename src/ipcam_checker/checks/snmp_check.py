@@ -193,7 +193,7 @@ def _parse_response(data: bytes) -> list[tuple[str, object]]:
                     value = val_bytes.decode("utf-8", errors="replace")
                 except Exception:
                     value = val_bytes
-            elif val_tag == 0x43:                        # TimeTicks
+            elif val_tag in (0x41, 0x42, 0x43, 0x46):   # Counter32, Gauge32/Unsigned32, TimeTicks, Counter64
                 value = _dec_int(val_bytes)
             elif val_tag == 0x06:                        # OID
                 value = _dec_oid(val_bytes)
