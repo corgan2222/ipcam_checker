@@ -16,6 +16,8 @@ class CameraConfig(BaseModel):
     rtsp_password: str = ""
     snapshot_url: str | None = None
     onvif_port: int = 80
+    onvif_username: str = ""
+    onvif_password: str = ""
 
 
 class PingResult(BaseModel):

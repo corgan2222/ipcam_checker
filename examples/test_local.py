@@ -32,6 +32,8 @@ CAMERAS = [
         ip="192.168.2.170",
         rtsp_url_main="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=1920x1080",
         rtsp_url_sub="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
+        onvif_username="test",
+        onvif_password="test",
     ),
     CameraConfig(
         name="ReoLinkFront",

@@ -38,12 +38,14 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
         )
 
     try:
+        username = camera.onvif_username or camera.rtsp_username
+        password = camera.onvif_password or camera.rtsp_password
         transport = Transport(timeout=settings.onvif_timeout_s)
         cam = ONVIFCamera(
             camera.ip,
             camera.onvif_port,
-            camera.rtsp_username,
-            camera.rtsp_password,
+            username,
+            password,
             transport=transport,
         )
 
