@@ -8,6 +8,7 @@ from typing import AsyncGenerator
 
 from ipcam_checker._logging import get_logger
 from ipcam_checker.checks.ping import check_ping
+from ipcam_checker.checks.ports import scan_ports
 from ipcam_checker.checks.rtsp import check_rtsp
 from ipcam_checker.checks.snapshot import check_snapshot
 from ipcam_checker.config import Settings
@@ -41,6 +42,7 @@ async def check_camera(
         sub_stream = None
         snapshot_base64 = None
 
+        port_results = []
         if ping.ok:
             main_coro = (
                 check_rtsp(camera, camera.rtsp_url_main, settings, executor)
@@ -50,9 +52,11 @@ async def check_camera(
                 check_rtsp(camera, camera.rtsp_url_sub, settings, executor)
                 if camera.rtsp_url_sub else _resolved(None)
             )
-            main_stream, sub_stream, snapshot_base64 = await asyncio.gather(
+            port_coro = scan_ports(camera.ip, settings) if settings.port_scan_enabled else _resolved([])
+            main_stream, sub_stream, snapshot_base64, port_results = await asyncio.gather(
                 main_coro, sub_coro,
                 check_snapshot(camera, settings, executor),
+                port_coro,
             )
         else:
             _log.info(
@@ -68,6 +72,7 @@ async def check_camera(
             main_stream=main_stream,
             sub_stream=sub_stream,
             snapshot_base64=snapshot_base64,
+            port_results=port_results,
             plugin_results={},
         )
 

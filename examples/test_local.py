@@ -61,6 +61,7 @@ SETTINGS = Settings(
     ffprobe_analyze_duration_s=3.0,
     max_concurrent_cameras=10,
     snapshot_rtsp_fallback=False,
+    port_scan_enabled=True,
     log_level="DEBUG",
     log_file=Path("logs/ipcam_test.log"),
 )
@@ -114,6 +115,14 @@ def _fmt(result) -> str:
                 lines.append(f"         rtp:  {'  '.join(rtp_parts)}")
         else:
             lines.append(f"  {label}:    FAIL  err={stream.error}")
+
+    if result.port_results:
+        open_ports = [r for r in result.port_results if r.open]
+        closed_ports = [r for r in result.port_results if not r.open]
+        parts = [f"{r.port}/{r.protocol}" for r in open_ports]
+        if closed_ports:
+            parts += [f"{r.port}/{r.protocol}:closed" for r in closed_ports]
+        lines.append(f"  ports:   {('  '.join(parts)) if parts else 'none open'}")
 
     return "\n".join(lines)
 

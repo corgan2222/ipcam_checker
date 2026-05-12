@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CameraConfig(BaseModel):
@@ -52,6 +52,14 @@ class StreamResult(BaseModel):
     error: str | None
 
 
+class PortResult(BaseModel):
+    port: int
+    protocol: str  # "tcp" or "udp"
+    open: bool
+    latency_ms: float | None = None
+    error: str | None = None
+
+
 class CameraResult(BaseModel):
     name: str
     ip: str
@@ -60,4 +68,5 @@ class CameraResult(BaseModel):
     main_stream: StreamResult | None
     sub_stream: StreamResult | None
     snapshot_base64: str | None
+    port_results: list[PortResult] = Field(default_factory=list)
     plugin_results: dict[str, Any]

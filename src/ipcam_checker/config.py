@@ -22,6 +22,12 @@ class Settings(BaseModel):
     snapshot_height: int = 400
     snapshot_rtsp_fallback: bool = True  # grab frame via ffmpeg when no snapshot_url
 
+    # Port scan
+    port_scan_enabled: bool = False
+    port_scan_tcp_ports: list[int] = Field(default_factory=lambda: [80, 443, 8443, 8000])
+    port_scan_udp_ports: list[int] = Field(default_factory=lambda: [161])
+    port_scan_timeout_s: float = 2.0
+
     # Bulk concurrency
     max_concurrent_cameras: int = 50
     thread_pool_size: int = 20
