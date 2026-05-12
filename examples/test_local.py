@@ -6,61 +6,61 @@ from pathlib import Path
 from ipcam_checker import CameraConfig, Settings, check_cameras, setup_logging
 
 CAMERAS = [
-    CameraConfig(
-        name="Sony-182",
-        ip="192.168.2.182",
-        rtsp_port=554,
-        rtsp_url_main="/media/video1",
-        rtsp_url_sub="/media/video2",
-    ),
-    CameraConfig(
-        name="Sony-184",
-        ip="192.168.2.184",
-        rtsp_port=554,
-        rtsp_url_main="/media/video1",
-        rtsp_url_sub="/media/video2",
-    ),
-    CameraConfig(
-        name="Sony-187",
-        ip="192.168.2.187",
-        rtsp_port=554,
-        rtsp_url_main="/media/video1",
-        rtsp_url_sub="/media/video2",
-    ),
+    # CameraConfig(
+    #     name="Sony-182",
+    #     ip="192.168.2.182",
+    #     rtsp_port=554,
+    #     rtsp_url_main="/media/video1",
+    #     rtsp_url_sub="/media/video2",
+    # ),
+    # CameraConfig(
+    #     name="Sony-184",
+    #     ip="192.168.2.184",
+    #     rtsp_port=554,
+    #     rtsp_url_main="/media/video1",
+    #     rtsp_url_sub="/media/video2",
+    # ),
+    # CameraConfig(
+    #     name="Sony-187",
+    #     ip="192.168.2.187",
+    #     rtsp_port=554,
+    #     rtsp_url_main="/media/video1",
+    #     rtsp_url_sub="/media/video2",
+    # ),
     CameraConfig(
         name="Axis-170",
         ip="192.168.2.170",
         rtsp_url_main="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=1920x1080",
         rtsp_url_sub="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
-        onvif_username="test",
-        onvif_password="test",
-    ),
-    CameraConfig(
-        name="ReoLinkFront",
-        ip="192.168.2.53",
-        rtsp_url_main="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_main",
-        rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_sub",
-    ),
-    CameraConfig(
-        name="ReoLinkFront-test",
-        ip="192.168.2.53",
-        rtsp_url_sub="/h264Preview_01_sub",
-        rtsp_username="admin",
-        rtsp_password="REDACTED",
-    ),
-    CameraConfig(
-        name="FrontOld",
-        ip="192.168.2.50",
-        rtsp_url_main=None,
-        rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
-    ),
+        onvif_username="onvifadmin",
+        onvif_password="REDACTED",
+    )#,
+    # CameraConfig(
+    #     name="ReoLinkFront",
+    #     ip="192.168.2.53",
+    #     rtsp_url_main="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_main",
+    #     rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_sub",
+    # ),
+    # CameraConfig(
+    #     name="ReoLinkFront-test",
+    #     ip="192.168.2.53",
+    #     rtsp_url_sub="/h264Preview_01_sub",
+    #     rtsp_username="admin",
+    #     rtsp_password="REDACTED",
+    # ),
+    # CameraConfig(
+    #     name="FrontOld",
+    #     ip="192.168.2.50",
+    #     rtsp_url_main=None,
+    #     rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
+    # ),
 ]
 
 SETTINGS = Settings(
     check_ping_enabled=True,
-    check_rtsp_enabled=True,
+    check_rtsp_enabled=False,
     check_snapshot_enabled=False,
-    check_ports_enabled=True,
+    check_ports_enabled=False,
     check_onvif_enabled=True,
     ping_count=2,
     ping_timeout_s=1.0,
@@ -159,6 +159,8 @@ def _fmt(result) -> str:
             lines.append(f"           profiles: {'  '.join(prof_parts)}")
         if caps:
             lines.append(f"           caps: {caps}")
+        if onvif.analytics_modules:
+            lines.append(f"           analytics: {'  '.join(onvif.analytics_modules)}")
 
     return "\n".join(lines)
 

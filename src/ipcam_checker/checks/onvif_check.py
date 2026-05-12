@@ -102,6 +102,33 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
         except Exception:
             pass
 
+        # Analytics modules (configured instances across all profiles)
+        analytics_modules: list[str] = []
+        if analytics_supported:
+            try:
+                analytics_svc = cam.create_analytics_service()
+                seen: set[str] = set()
+                for p in raw_profiles:
+                    va_cfg = getattr(p, "VideoAnalyticsConfiguration", None)
+                    if va_cfg is None:
+                        continue
+                    va_token = getattr(va_cfg, "token", None)
+                    if not va_token:
+                        continue
+                    try:
+                        modules = analytics_svc.GetAnalyticsModules(
+                            {"ConfigurationToken": va_token}
+                        )
+                        for m in (modules or []):
+                            name = getattr(m, "Name", None) or ""
+                            if name and name not in seen:
+                                seen.add(name)
+                                analytics_modules.append(name)
+                    except Exception:
+                        pass
+            except Exception as exc:
+                _log.debug("onvif.analytics_error", extra={"camera": camera.name, "error": str(exc)})
+
         _log.info(
             "onvif.ok",
             extra={
@@ -123,6 +150,7 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
             profiles=profiles,
             ptz_supported=ptz_supported,
             analytics_supported=analytics_supported,
+            analytics_modules=analytics_modules,
         )
 
     except Exception as exc:

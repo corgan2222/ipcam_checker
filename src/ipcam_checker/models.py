@@ -84,6 +84,7 @@ class OnvifResult(BaseModel):
     profiles: list[OnvifProfile] = Field(default_factory=list)
     ptz_supported: bool = False
     analytics_supported: bool = False
+    analytics_modules: list[str] = Field(default_factory=list)
     error: str | None = None
 
 
