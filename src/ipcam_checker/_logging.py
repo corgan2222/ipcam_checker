@@ -20,12 +20,13 @@ def setup_logging(
     level: str = "INFO",
     log_file: Path | str | None = None,
     json_file: bool = True,
+    console: bool = False,
     loki_url: str | None = None,
     loki_labels: dict[str, str] | None = None,
 ) -> None:
     """Configure ipcam_checker logging. Call once at application startup.
 
-    Console output is plain text for human readability.
+    Console output is plain text (opt-in via console=True).
     File output is JSON (Loki/Promtail-ready) when python-json-logger is installed.
     Direct Loki push is optional via python-logging-loki.
     """
@@ -34,7 +35,8 @@ def setup_logging(
     root.handlers.clear()
     root.propagate = False
 
-    _add_console(root)
+    if console:
+        _add_console(root)
 
     if log_file:
         _add_file(root, Path(log_file), json_file)

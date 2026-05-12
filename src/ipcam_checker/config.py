@@ -33,6 +33,7 @@ class Settings(BaseModel):
     log_level: str = "INFO"
     log_file: Path | None = None
     log_json: bool = True           # JSON format for log file (Loki/Promtail-ready)
+    log_console: bool = False       # print log to stderr (useful during development)
     loki_url: str | None = None     # e.g. "http://loki:3100/loki/api/v1/push"
     loki_labels: dict[str, Any] = Field(default_factory=dict)
 
@@ -43,6 +44,7 @@ class Settings(BaseModel):
             level=self.log_level,
             log_file=self.log_file,
             json_file=self.log_json,
+            console=self.log_console,
             loki_url=self.loki_url,
             loki_labels=self.loki_labels,
         )
