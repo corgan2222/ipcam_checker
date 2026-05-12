@@ -1,8 +1,10 @@
 bin/ffmpeg*
 bin/ffprobe*
+bin/ffplay*
 dist/
 *.egg-info/
 __pycache__/
 .venv/
 .pytest_cache/
 *.pyc
+logs/
