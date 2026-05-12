@@ -34,6 +34,9 @@ CAMERAS = [
         rtsp_url_sub="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
         onvif_username="onvifadmin",
         onvif_password="REDACTED",
+        vapix_username="axisuser",
+        vapix_password="REDACTED",
+        check_vapix=True,
     )#,
     # CameraConfig(
     #     name="ReoLinkFront",
@@ -70,7 +73,7 @@ SETTINGS = Settings(
     max_concurrent_cameras=10,
     snapshot_rtsp_fallback=False,
     log_level="DEBUG",
-    log_file=Path("logs/ipcam_test.log"),
+    log_file=Path("logs/ipcam_test.log"),    
 )
 
 

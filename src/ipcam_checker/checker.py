@@ -75,7 +75,7 @@ async def check_camera(
             )
             vapix_coro = (
                 check_vapix(camera, settings)
-                if settings.check_vapix_enabled else _resolved(None)
+                if (settings.check_vapix_enabled and camera.check_vapix) else _resolved(None)
             )
             main_stream, sub_stream, snapshot_base64, port_results, onvif_result, vapix_result = await asyncio.gather(
                 main_coro, sub_coro, snap_coro, port_coro, onvif_coro, vapix_coro,

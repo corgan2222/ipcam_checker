@@ -22,6 +22,7 @@ class CameraConfig(BaseModel):
     vapix_ssl: bool = False
     vapix_username: str = ""
     vapix_password: str = ""
+    check_vapix: bool = False
 
 
 class PingResult(BaseModel):
