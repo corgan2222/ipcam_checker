@@ -9,7 +9,7 @@ from ipcam_checker.checks.ping import check_ping
 from ipcam_checker.checks.rtsp import check_rtsp
 from ipcam_checker.checks.snapshot import check_snapshot
 from ipcam_checker.config import Settings
-from ipcam_checker.models import CameraConfig, CameraResult
+from ipcam_checker.models import CameraConfig, CameraResult, PingResult
 from ipcam_checker.plugins.base import AbstractPlugin
 
 
@@ -87,7 +87,22 @@ async def check_cameras(
 
     async def bounded_check(camera: CameraConfig) -> None:
         async with semaphore:
-            result = await check_camera(camera, settings, plugins)
+            try:
+                result = await check_camera(camera, settings, plugins)
+            except Exception as exc:
+                result = CameraResult(
+                    name=camera.name,
+                    ip=camera.ip,
+                    checked_at=datetime.now(timezone.utc),
+                    ping=PingResult(
+                        ok=False, latency_ms=None, jitter_ms=None,
+                        packet_loss_percent=None, error=str(exc),
+                    ),
+                    main_stream=None,
+                    sub_stream=None,
+                    snapshot_base64=None,
+                    plugin_results={},
+                )
             await queue.put(result)
 
     tasks = [asyncio.create_task(bounded_check(cam)) for cam in cameras]
