@@ -45,7 +45,7 @@ def _parse_ping_output(stdout: str, returncode: int, platform: str) -> PingResul
         latency_ms=latency,
         jitter_ms=jitter,
         packet_loss_percent=packet_loss,
-        error=None if ok else f"packet loss: {packet_loss}%",
+        error=None if ok else (f"packet loss: {packet_loss}%" if packet_loss is not None else "ping failed: no loss data"),
     )
 
 
