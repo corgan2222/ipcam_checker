@@ -60,7 +60,7 @@ SETTINGS = Settings(
     rtsp_timeout_s=4.0,
     ffprobe_analyze_duration_s=3.0,
     max_concurrent_cameras=10,
-    snapshot_rtsp_fallback=True,
+    snapshot_rtsp_fallback=False,
     log_level="DEBUG",
     log_file=Path("logs/ipcam_test.log"),
 )
@@ -101,6 +101,17 @@ def _fmt(result) -> str:
                 f"  {label}:    OK  {stream.width}x{stream.height}  "
                 f"{stream.fps}fps  {video_info}  {stream.bitrate_kbps}kbps{meta}"
             )
+            rtp_parts = []
+            if stream.packets_received is not None:
+                rtp_parts.append(f"pkts={stream.packets_received}")
+            if stream.packets_lost is not None:
+                rtp_parts.append(f"lost={stream.packets_lost}({stream.loss_percent}%)")
+            if stream.jitter_avg_ms is not None:
+                rtp_parts.append(f"jitter={stream.jitter_avg_ms}/{stream.jitter_max_ms}ms")
+            if stream.bitrate_avg_kbps is not None:
+                rtp_parts.append(f"avg={stream.bitrate_avg_kbps}kbps")
+            if rtp_parts:
+                lines.append(f"         rtp:  {'  '.join(rtp_parts)}")
         else:
             lines.append(f"  {label}:    FAIL  err={stream.error}")
 
