@@ -13,6 +13,7 @@ class Settings(BaseModel):
     check_snapshot_enabled: bool = True
     check_ports_enabled: bool = False
     check_onvif_enabled: bool = False
+    check_vapix_enabled: bool = False
 
     # Ping
     ping_count: int = 4
@@ -31,6 +32,9 @@ class Settings(BaseModel):
 
     # ONVIF
     onvif_timeout_s: float = 5.0
+
+    # VAPIX
+    vapix_timeout_s: float = 5.0
 
     # Port scan
     port_scan_tcp_ports: list[int] = Field(default_factory=lambda: [80, 443, 554, 8000, 8443])

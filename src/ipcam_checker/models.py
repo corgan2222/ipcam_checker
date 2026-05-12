@@ -18,6 +18,10 @@ class CameraConfig(BaseModel):
     onvif_port: int = 80
     onvif_username: str = ""
     onvif_password: str = ""
+    vapix_port: int = 80
+    vapix_ssl: bool = False
+    vapix_username: str = ""
+    vapix_password: str = ""
 
 
 class PingResult(BaseModel):
@@ -63,6 +67,26 @@ class PortResult(BaseModel):
     error: str | None = None
 
 
+class VapixSensor(BaseModel):
+    id: str
+    name: str | None = None
+    celsius: float | None = None
+    fahrenheit: float | None = None
+
+
+class VapixHeater(BaseModel):
+    id: str
+    status: str | None = None
+    time_until_stop: int | None = None
+
+
+class VapixResult(BaseModel):
+    ok: bool
+    sensors: list[VapixSensor] = Field(default_factory=list)
+    heaters: list[VapixHeater] = Field(default_factory=list)
+    error: str | None = None
+
+
 class OnvifProfile(BaseModel):
     name: str
     token: str
@@ -98,4 +122,5 @@ class CameraResult(BaseModel):
     snapshot_base64: str | None
     port_results: list[PortResult] = Field(default_factory=list)
     onvif_result: OnvifResult | None = None
+    vapix_result: VapixResult | None = None
     plugin_results: dict[str, Any]

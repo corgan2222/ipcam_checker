@@ -6,13 +6,13 @@ from pathlib import Path
 from ipcam_checker import CameraConfig, Settings, check_cameras, setup_logging
 
 CAMERAS = [
-    # CameraConfig(
-    #     name="Sony-182",
-    #     ip="192.168.2.182",
-    #     rtsp_port=554,
-    #     rtsp_url_main="/media/video1",
-    #     rtsp_url_sub="/media/video2",
-    # ),
+    CameraConfig(
+        name="Sony-182",
+        ip="192.168.2.182",
+        rtsp_port=554,
+        rtsp_url_main="/media/video1",
+        rtsp_url_sub="/media/video2",
+    ),
     # CameraConfig(
     #     name="Sony-184",
     #     ip="192.168.2.184",
@@ -62,6 +62,7 @@ SETTINGS = Settings(
     check_snapshot_enabled=False,
     check_ports_enabled=False,
     check_onvif_enabled=True,
+    check_vapix_enabled=True,
     ping_count=2,
     ping_timeout_s=1.0,
     rtsp_timeout_s=4.0,
@@ -161,6 +162,22 @@ def _fmt(result) -> str:
             lines.append(f"           caps: {caps}")
         if onvif.analytics_modules:
             lines.append(f"           analytics: {'  '.join(onvif.analytics_modules)}")
+
+    vapix = result.vapix_result
+    if vapix is None:
+        lines.append("  vapix:   disabled")
+    elif not vapix.ok:
+        lines.append(f"  vapix:   FAIL  err={vapix.error}")
+    else:
+        sensor_parts = [
+            f"{s.name or s.id}={s.celsius}°C"
+            for s in vapix.sensors if s.celsius is not None
+        ]
+        lines.append(f"  vapix:   OK  {'  '.join(sensor_parts) if sensor_parts else 'no sensors'}")
+        if vapix.heaters:
+            heater_parts = [f"{h.id}={h.status}" for h in vapix.heaters if h.status]
+            if heater_parts:
+                lines.append(f"           heater: {'  '.join(heater_parts)}")
 
     return "\n".join(lines)
 
