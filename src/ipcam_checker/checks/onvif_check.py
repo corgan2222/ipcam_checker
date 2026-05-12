@@ -10,7 +10,24 @@ from ipcam_checker.models import CameraConfig, OnvifProfile, OnvifResult
 _log = get_logger("onvif")
 
 
+def _port_reachable(ip: str, port: int, timeout: float) -> bool:
+    import socket
+    try:
+        with socket.create_connection((ip, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
+    if not _port_reachable(camera.ip, camera.onvif_port, settings.onvif_timeout_s):
+        _log.debug(
+            "onvif.skip",
+            extra={"camera": camera.name, "ip": camera.ip, "port": camera.onvif_port,
+                   "reason": "port unreachable"},
+        )
+        return OnvifResult(ok=False, error=f"port {camera.onvif_port} unreachable")
+
     try:
         from onvif import ONVIFCamera  # type: ignore[import]
         from zeep.transports import Transport  # type: ignore[import]
