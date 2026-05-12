@@ -23,6 +23,8 @@ class CameraConfig(BaseModel):
     vapix_username: str = ""
     vapix_password: str = ""
     check_vapix: bool = False
+    check_snmp: bool = False
+    snmp_community_read: str = "public"
 
 
 class PingResult(BaseModel):
@@ -88,6 +90,28 @@ class VapixResult(BaseModel):
     error: str | None = None
 
 
+class SnmpTempSensor(BaseModel):
+    sensor_type: str | None = None  # "common", "housing", "rack", "cpu"
+    sensor_id: int
+    status: str | None = None       # "ok", "failure", "outOfBoundary"
+    celsius: int | None = None
+
+
+class SnmpVideoChannel(BaseModel):
+    channel_id: int
+    signal_status: str | None = None  # "signalOk", "noSignal"
+
+
+class SnmpResult(BaseModel):
+    ok: bool
+    sys_descr: str | None = None
+    sys_name: str | None = None
+    uptime_s: int | None = None
+    temp_sensors: list[SnmpTempSensor] = Field(default_factory=list)
+    video_channels: list[SnmpVideoChannel] = Field(default_factory=list)
+    error: str | None = None
+
+
 class OnvifProfile(BaseModel):
     name: str
     token: str
@@ -124,4 +148,5 @@ class CameraResult(BaseModel):
     port_results: list[PortResult] = Field(default_factory=list)
     onvif_result: OnvifResult | None = None
     vapix_result: VapixResult | None = None
+    snmp_result: SnmpResult | None = None
     plugin_results: dict[str, Any]

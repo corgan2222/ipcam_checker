@@ -37,6 +37,7 @@ CAMERAS = [
         vapix_username="axisuser",
         vapix_password="REDACTED",
         check_vapix=True,
+        check_snmp=True,
     )#,
     # CameraConfig(
     #     name="ReoLinkFront",
@@ -66,6 +67,7 @@ SETTINGS = Settings(
     check_ports_enabled=False,
     check_onvif_enabled=True,
     check_vapix_enabled=True,
+    check_snmp_enabled=True,
     ping_count=2,
     ping_timeout_s=1.0,
     rtsp_timeout_s=4.0,
@@ -181,6 +183,28 @@ def _fmt(result) -> str:
             heater_parts = [f"{h.id}={h.status}" for h in vapix.heaters if h.status]
             if heater_parts:
                 lines.append(f"           heater: {'  '.join(heater_parts)}")
+
+    snmp = result.snmp_result
+    if snmp is None:
+        lines.append("  snmp:    disabled")
+    elif not snmp.ok:
+        lines.append(f"  snmp:    FAIL  err={snmp.error}")
+    else:
+        uptime = f"  uptime={snmp.uptime_s}s" if snmp.uptime_s is not None else ""
+        name = f"  name={snmp.sys_name!r}" if snmp.sys_name else ""
+        lines.append(f"  snmp:    OK{name}{uptime}")
+        if snmp.sys_descr:
+            lines.append(f"           descr: {snmp.sys_descr[:80]}")
+        if snmp.temp_sensors:
+            temp_parts = [
+                f"{s.sensor_type or s.sensor_id}={s.celsius}°C({s.status})"
+                for s in snmp.temp_sensors if s.celsius is not None
+            ]
+            if temp_parts:
+                lines.append(f"           temp: {'  '.join(temp_parts)}")
+        if snmp.video_channels:
+            ch_parts = [f"ch{c.channel_id}={c.signal_status}" for c in snmp.video_channels]
+            lines.append(f"           video: {'  '.join(ch_parts)}")
 
     return "\n".join(lines)
 

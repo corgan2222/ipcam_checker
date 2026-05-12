@@ -36,6 +36,11 @@ class Settings(BaseModel):
     # VAPIX
     vapix_timeout_s: float = 5.0
 
+    # SNMP
+    check_snmp_enabled: bool = False
+    snmp_port: int = 161
+    snmp_timeout_s: float = 5.0
+
     # Port scan
     port_scan_tcp_ports: list[int] = Field(default_factory=lambda: [80, 443, 554, 8000, 8443])
     port_scan_udp_ports: list[int] = Field(default_factory=lambda: [161])
