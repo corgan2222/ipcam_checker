@@ -30,7 +30,7 @@ CAMERAS = [
     CameraConfig(
         name="Axis-170",
         ip="192.168.2.170",
-        rtsp_url_main="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
+        rtsp_url_main="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=1920x1080",
         rtsp_url_sub="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
     ),
     CameraConfig(
@@ -42,9 +42,9 @@ CAMERAS = [
     CameraConfig(
         name="ReoLinkFront-test",
         ip="192.168.2.53",
-        rtsp_url_main="/h264Preview_01_main",
-        rtsp_username="test",
-        rtsp_password="test",
+        rtsp_url_sub="/h264Preview_01_sub",
+        rtsp_username="admin",
+        rtsp_password="REDACTED",
     ),
     CameraConfig(
         name="FrontOld",
@@ -60,6 +60,7 @@ SETTINGS = Settings(
     rtsp_timeout_s=4.0,
     ffprobe_analyze_duration_s=3.0,
     max_concurrent_cameras=10,
+    snapshot_rtsp_fallback=True,
     log_level="DEBUG",
     log_file=Path("logs/ipcam_test.log"),
 )
@@ -86,7 +87,7 @@ def _fmt(result) -> str:
             if stream.pix_fmt:
                 video_info += f"  {stream.pix_fmt}"
             if stream.level is not None:
-                video_info += f"  L{stream.level}"
+                video_info += f"  Level{stream.level}"
             if stream.audio_codec:
                 video_info += f"  audio:{stream.audio_codec}"
             meta = ""
