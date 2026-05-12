@@ -59,6 +59,7 @@ SETTINGS = Settings(
     check_rtsp_enabled=True,
     check_snapshot_enabled=False,
     check_ports_enabled=True,
+    check_onvif_enabled=True,
     ping_count=2,
     ping_timeout_s=1.0,
     rtsp_timeout_s=4.0,
@@ -128,6 +129,34 @@ def _fmt(result) -> str:
         open_ports = [r for r in result.port_results if r.open]
         parts = [f"{r.port}/{r.protocol}" for r in open_ports]
         lines.append(f"  ports:   {('  '.join(parts)) if parts else 'none open'}")
+
+    onvif = result.onvif_result
+    if onvif is None:
+        lines.append("  onvif:   disabled")
+    elif not onvif.ok:
+        lines.append(f"  onvif:   FAIL  err={onvif.error}")
+    else:
+        ver = f"ONVIF {onvif.onvif_version}" if onvif.onvif_version else "ONVIF"
+        device = "  ".join(filter(None, [onvif.manufacturer, onvif.model]))
+        fw = f"  FW:{onvif.firmware_version}" if onvif.firmware_version else ""
+        sn = f"  SN:{onvif.serial_number}" if onvif.serial_number else ""
+        caps = "  ".join(filter(None, [
+            "PTZ" if onvif.ptz_supported else None,
+            "Analytics" if onvif.analytics_supported else None,
+        ]))
+        lines.append(f"  onvif:   OK  {ver}  {device}{fw}{sn}")
+        if onvif.profiles:
+            prof_parts = []
+            for p in onvif.profiles:
+                res = f"{p.width}x{p.height}" if p.width and p.height else ""
+                fps = f"{p.fps}fps" if p.fps else ""
+                bps = f"{p.bitrate_kbps}kbps" if p.bitrate_kbps else ""
+                enc = p.encoding or ""
+                detail = "  ".join(filter(None, [enc, res, fps, bps]))
+                prof_parts.append(f"{p.name}({detail})" if detail else p.name)
+            lines.append(f"           profiles: {'  '.join(prof_parts)}")
+        if caps:
+            lines.append(f"           caps: {caps}")
 
     return "\n".join(lines)
 

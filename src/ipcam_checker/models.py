@@ -15,6 +15,7 @@ class CameraConfig(BaseModel):
     rtsp_username: str = ""
     rtsp_password: str = ""
     snapshot_url: str | None = None
+    onvif_port: int = 80
 
 
 class PingResult(BaseModel):
@@ -60,6 +61,30 @@ class PortResult(BaseModel):
     error: str | None = None
 
 
+class OnvifProfile(BaseModel):
+    name: str
+    token: str
+    encoding: str | None = None
+    width: int | None = None
+    height: int | None = None
+    fps: float | None = None
+    bitrate_kbps: int | None = None
+
+
+class OnvifResult(BaseModel):
+    ok: bool
+    manufacturer: str | None = None
+    model: str | None = None
+    firmware_version: str | None = None
+    serial_number: str | None = None
+    hardware_id: str | None = None
+    onvif_version: str | None = None
+    profiles: list[OnvifProfile] = Field(default_factory=list)
+    ptz_supported: bool = False
+    analytics_supported: bool = False
+    error: str | None = None
+
+
 class CameraResult(BaseModel):
     name: str
     ip: str
@@ -69,4 +94,5 @@ class CameraResult(BaseModel):
     sub_stream: StreamResult | None
     snapshot_base64: str | None
     port_results: list[PortResult] = Field(default_factory=list)
+    onvif_result: OnvifResult | None = None
     plugin_results: dict[str, Any]

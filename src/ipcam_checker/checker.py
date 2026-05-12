@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from ipcam_checker._logging import get_logger
+from ipcam_checker.checks.onvif_check import check_onvif
 from ipcam_checker.checks.ping import check_ping
 from ipcam_checker.checks.ports import scan_ports
 from ipcam_checker.checks.rtsp import check_rtsp
@@ -45,6 +46,7 @@ async def check_camera(
         sub_stream = None
         snapshot_base64 = None
         port_results = []
+        onvif_result = None
 
         # Run remaining checks when ping is disabled (unknown) or succeeded
         run_checks = (ping is None) or ping.ok
@@ -65,8 +67,12 @@ async def check_camera(
                 scan_ports(camera.ip, settings)
                 if settings.check_ports_enabled else _resolved([])
             )
-            main_stream, sub_stream, snapshot_base64, port_results = await asyncio.gather(
-                main_coro, sub_coro, snap_coro, port_coro,
+            onvif_coro = (
+                check_onvif(camera, settings, executor)
+                if settings.check_onvif_enabled else _resolved(None)
+            )
+            main_stream, sub_stream, snapshot_base64, port_results, onvif_result = await asyncio.gather(
+                main_coro, sub_coro, snap_coro, port_coro, onvif_coro,
             )
         elif ping is not None and not ping.ok:
             _log.info(
@@ -83,6 +89,7 @@ async def check_camera(
             sub_stream=sub_stream,
             snapshot_base64=snapshot_base64,
             port_results=port_results,
+            onvif_result=onvif_result,
             plugin_results={},
         )
 

@@ -27,6 +27,9 @@ dev = [
 loki = [
     "python-logging-loki>=0.3",
 ]
+onvif = [
+    "onvif-zeep>=0.2.12",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ipcam_checker"]

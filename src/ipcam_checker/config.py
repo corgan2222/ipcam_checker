@@ -12,6 +12,7 @@ class Settings(BaseModel):
     check_rtsp_enabled: bool = True
     check_snapshot_enabled: bool = True
     check_ports_enabled: bool = False
+    check_onvif_enabled: bool = False
 
     # Ping
     ping_count: int = 4
@@ -27,6 +28,9 @@ class Settings(BaseModel):
     snapshot_width: int = 600
     snapshot_height: int = 400
     snapshot_rtsp_fallback: bool = True  # grab frame via ffmpeg when no snapshot_url
+
+    # ONVIF
+    onvif_timeout_s: float = 5.0
 
     # Port scan
     port_scan_tcp_ports: list[int] = Field(default_factory=lambda: [80, 443, 554, 8000, 8443])
