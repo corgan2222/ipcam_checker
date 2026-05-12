@@ -47,6 +47,7 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
             username,
             password,
             transport=transport,
+            adjust_time=True,  # sync timestamps to camera clock, prevents auth failures on time drift
         )
 
         # Device information
