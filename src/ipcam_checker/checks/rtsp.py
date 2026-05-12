@@ -101,6 +101,7 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
         url = _build_rtsp_url(camera, stream_path)
         analyze_us = int(settings.ffprobe_analyze_duration_s * 1_000_000)
         timeout_us = int(settings.rtsp_timeout_s * 1_000_000)
+        read_interval = f"%+{settings.ffprobe_analyze_duration_s:.0f}"
         cmd = [
             str(ffprobe),
             "-v", "quiet",
@@ -109,6 +110,7 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             "-show_format",
             "-show_packets",
             "-select_streams", "v:0",
+            "-read_intervals", read_interval,
             "-analyzeduration", str(analyze_us),
             "-probesize", "5000000",
             "-timeout", str(timeout_us),
