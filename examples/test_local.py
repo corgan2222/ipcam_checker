@@ -36,14 +36,14 @@ CAMERAS = [
     CameraConfig(
         name="ReoLinkFront",
         ip="192.168.2.53",
-        rtsp_url_main="rtsp://admin:xxxx@192.168.2.53:554/h264Preview_01_main",
-        rtsp_url_sub="rtsp://admin:xxxx@192.168.2.53:554/h264Preview_01_sub",
+        rtsp_url_main="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_main",
+        rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_sub",
     ),
     CameraConfig(
         name="FrontOld",
         ip="192.168.2.50",
         rtsp_url_main=None,
-        rtsp_url_sub="rtsp://admin:xxxxx@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
+        rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
     ),
 ]
 
@@ -71,11 +71,27 @@ def _fmt(result) -> str:
 
     for label, stream in [("main", result.main_stream), ("sub ", result.sub_stream)]:
         if stream is None:
-            lines.append(f"  {label}:    skipped (ping failed)")
+            lines.append(f"  {label}:    skipped")
         elif stream.ok:
+            video_info = f"{stream.codec}"
+            if stream.profile:
+                video_info += f" ({stream.profile})"
+            if stream.pix_fmt:
+                video_info += f"  {stream.pix_fmt}"
+            if stream.level is not None:
+                video_info += f"  L{stream.level}"
+            if stream.audio_codec:
+                video_info += f"  audio:{stream.audio_codec}"
+            meta = ""
+            if stream.title:
+                meta += f"  title={stream.title!r}"
+            if stream.comment:
+                meta += f"  comment={stream.comment!r}"
+            if stream.probe_score is not None:
+                meta += f"  probe={stream.probe_score}"
             lines.append(
                 f"  {label}:    OK  {stream.width}x{stream.height}  "
-                f"{stream.fps}fps  {stream.codec}  {stream.bitrate_kbps}kbps"
+                f"{stream.fps}fps  {video_info}  {stream.bitrate_kbps}kbps{meta}"
             )
         else:
             lines.append(f"  {label}:    FAIL  err={stream.error}")

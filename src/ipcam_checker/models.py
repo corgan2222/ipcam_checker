@@ -31,7 +31,14 @@ class StreamResult(BaseModel):
     height: int | None
     fps: float | None
     codec: str | None
+    profile: str | None = None
+    pix_fmt: str | None = None
+    level: int | None = None
+    audio_codec: str | None = None
     bitrate_kbps: float | None
+    title: str | None = None
+    comment: str | None = None
+    probe_score: int | None = None
     error: str | None
 
 

@@ -48,12 +48,21 @@ def _safe_stream_label(camera: CameraConfig, stream_path: str) -> str:
     return f"{camera.ip}:{camera.rtsp_port}{stream_path}"
 
 
-def _parse_fps(r_frame_rate: str) -> float | None:
+def _parse_fps(rate: str) -> float | None:
     try:
-        num, den = r_frame_rate.split("/")
-        return round(int(num) / int(den), 3)
+        num, den = rate.split("/")
+        val = int(num) / int(den)
+        return round(val, 3) if val > 0 else None
     except Exception:
         return None
+
+
+def _best_fps(video: dict) -> float | None:
+    # avg_frame_rate is the actual playback rate; r_frame_rate is tbr (often higher)
+    return (
+        _parse_fps(video.get("avg_frame_rate", ""))
+        or _parse_fps(video.get("r_frame_rate", ""))
+    )
 
 
 def _compute_bitrate_kbps(data: dict) -> float | None:
@@ -152,10 +161,22 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             )
 
         bitrate_kbps = _compute_bitrate_kbps(data)
-        fps = _parse_fps(video.get("r_frame_rate", ""))
+        fps = _best_fps(video)
         width = video.get("width")
         height = video.get("height")
         codec = video.get("codec_name")
+        profile = video.get("profile")
+        pix_fmt = video.get("pix_fmt")
+        level = video.get("level")
+
+        audio = next((s for s in data.get("streams", []) if s.get("codec_type") == "audio"), None)
+        audio_codec = audio.get("codec_name") if audio else None
+
+        fmt = data.get("format", {})
+        tags = fmt.get("tags", {})
+        title = tags.get("title")
+        comment = tags.get("comment")
+        probe_score = fmt.get("probe_score")
 
         _log.info(
             "rtsp.ok",
@@ -166,12 +187,21 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
                 "resolution": f"{width}x{height}",
                 "fps": fps,
                 "codec": codec,
+                "profile": profile,
+                "pix_fmt": pix_fmt,
+                "level": level,
+                "audio_codec": audio_codec,
                 "bitrate_kbps": bitrate_kbps,
+                "title": title,
+                "probe_score": probe_score,
             },
         )
         return StreamResult(
             ok=True, width=width, height=height, fps=fps,
-            codec=codec, bitrate_kbps=bitrate_kbps, error=None,
+            codec=codec, profile=profile, pix_fmt=pix_fmt, level=level,
+            audio_codec=audio_codec, bitrate_kbps=bitrate_kbps,
+            title=title, comment=comment, probe_score=probe_score,
+            error=None,
         )
 
     except subprocess.TimeoutExpired:
