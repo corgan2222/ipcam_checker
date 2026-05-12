@@ -17,6 +17,10 @@ from ipcam_checker.plugins.base import AbstractPlugin
 _log = get_logger("checker")
 
 
+async def _resolved(value):
+    return value
+
+
 async def check_camera(
     camera: CameraConfig,
     settings: Settings | None = None,
@@ -38,11 +42,17 @@ async def check_camera(
         snapshot_base64 = None
 
         if ping.ok:
-            main_task = asyncio.create_task(check_rtsp(camera, camera.rtsp_url_main, settings, executor))
-            sub_task = asyncio.create_task(check_rtsp(camera, camera.rtsp_url_sub, settings, executor))
-            snap_task = asyncio.create_task(check_snapshot(camera, settings, executor))
+            main_coro = (
+                check_rtsp(camera, camera.rtsp_url_main, settings, executor)
+                if camera.rtsp_url_main else _resolved(None)
+            )
+            sub_coro = (
+                check_rtsp(camera, camera.rtsp_url_sub, settings, executor)
+                if camera.rtsp_url_sub else _resolved(None)
+            )
             main_stream, sub_stream, snapshot_base64 = await asyncio.gather(
-                main_task, sub_task, snap_task
+                main_coro, sub_coro,
+                check_snapshot(camera, settings, executor),
             )
         else:
             _log.info(

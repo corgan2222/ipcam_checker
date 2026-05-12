@@ -10,8 +10,8 @@ class CameraConfig(BaseModel):
     name: str
     ip: str
     rtsp_port: int = 554
-    rtsp_url_main: str
-    rtsp_url_sub: str
+    rtsp_url_main: str | None = None
+    rtsp_url_sub: str | None = None
     rtsp_username: str = ""
     rtsp_password: str = ""
     snapshot_url: str | None = None

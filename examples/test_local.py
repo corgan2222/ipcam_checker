@@ -33,6 +33,18 @@ CAMERAS = [
         rtsp_url_main="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
         rtsp_url_sub="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
     ),
+    CameraConfig(
+        name="ReoLinkFront",
+        ip="192.168.2.53",
+        rtsp_url_main="rtsp://admin:xxxx@192.168.2.53:554/h264Preview_01_main",
+        rtsp_url_sub="rtsp://admin:xxxx@192.168.2.53:554/h264Preview_01_sub",
+    ),
+    CameraConfig(
+        name="FrontOld",
+        ip="192.168.2.50",
+        rtsp_url_main=None,
+        rtsp_url_sub="rtsp://admin:xxxxx@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
+    ),
 ]
 
 SETTINGS = Settings(
