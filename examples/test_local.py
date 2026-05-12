@@ -217,6 +217,20 @@ def _fmt(result) -> str:
                         f"           store: [{s.storage_type or '?'}] {s.descr or ''}  "
                         f"{s.used_mb}/{s.total_mb} MB{used_pct}"
                     )
+        if snmp.interfaces:
+            for iface in snmp.interfaces:
+                spd = f"  {iface.speed_mbps}Mbps" if iface.speed_mbps else ""
+                rx  = f"  rx={iface.rx_bytes/1e6:.1f}MB" if iface.rx_bytes is not None else ""
+                tx  = f"  tx={iface.tx_bytes/1e6:.1f}MB" if iface.tx_bytes is not None else ""
+                err_parts = []
+                if iface.rx_errors:
+                    err_parts.append(f"rx_err={iface.rx_errors}")
+                if iface.tx_errors:
+                    err_parts.append(f"tx_err={iface.tx_errors}")
+                if iface.rx_discards:
+                    err_parts.append(f"rx_drop={iface.rx_discards}")
+                errs = ("  " + "  ".join(err_parts)) if err_parts else ""
+                lines.append(f"           iface: {iface.name or iface.index}{spd}{rx}{tx}{errs}")
 
     return "\n".join(lines)
 

@@ -9,6 +9,7 @@ from ipcam_checker._logging import get_logger
 from ipcam_checker.config import Settings
 from ipcam_checker.models import (
     CameraConfig,
+    SnmpInterface,
     SnmpResult,
     SnmpStorageEntry,
     SnmpTempSensor,
@@ -30,9 +31,13 @@ _TEMP_TYPE_MAP   = {1: "common", 2: "housing", 3: "rack", 4: "cpu"}
 _TEMP_STATUS_MAP = {1: "ok", 2: "failure", 3: "outOfBoundary"}
 _SIGNAL_MAP      = {1: "signalOk", 2: "noSignal"}
 
-# HOST-RESOURCES-MIB (RFC 2790)
+# HOST-RESOURCES-MIB (RFC 2790) — not all cameras support this
 _OID_HR_STORAGE   = "1.3.6.1.2.1.25.2.3.1"    # hrStorageEntry
 _OID_HR_PROCESSOR = "1.3.6.1.2.1.25.3.3.1"    # hrProcessorEntry
+
+# IF-MIB (RFC 2863) — standard, widely supported
+_OID_IF_TABLE     = "1.3.6.1.2.1.2.2.1"       # ifEntry
+_IF_STATUS_MAP    = {1: "up", 2: "down", 3: "testing"}
 
 # hrStorageType OID → human label (last arc of the type OID)
 _HR_STORAGE_TYPE: dict[str, str] = {
@@ -289,9 +294,10 @@ def _snmp_worker(ip: str, community: str, port: int, timeout: float) -> SnmpResu
 
         temp_sensors: list[SnmpTempSensor] = []
         for row_idx, cols in temp_rows.items():
-            # Use SNMP row index as sensor_id — cameras often report id=1 for all rows
+            # Use last arc of the row index — handles both simple (1,2,3) and
+            # compound (1.1, 1.2, 1.3) table indexes
             try:
-                sensor_id = int(row_idx.split(".")[0])
+                sensor_id = int(row_idx.split(".")[-1])
             except (ValueError, TypeError):
                 sensor_id = 0
             type_int   = cols.get(1)
@@ -372,6 +378,47 @@ def _snmp_worker(ip: str, community: str, port: int, timeout: float) -> SnmpResu
                 used_mb=used_mb,
             ))
 
+        # ── network interfaces (IF-MIB, ifEntry) ──
+        if_rows: dict[str, dict[int, object]] = {}
+        for oid, val in _walk_table(sock, ip, port, community, _OID_IF_TABLE, req_id + 5):
+            suffix = oid[len(_OID_IF_TABLE) + 1:]
+            col_s, _, row_idx = suffix.partition(".")
+            if col_s.isdigit():
+                if_rows.setdefault(row_idx, {})[int(col_s)] = val
+
+        interfaces: list[SnmpInterface] = []
+        for row_idx, cols in if_rows.items():
+            try:
+                idx = int(row_idx.split(".")[-1])
+            except (ValueError, TypeError):
+                idx = 0
+            if_type  = cols.get(3)   # 24 = softwareLoopback — skip
+            if isinstance(if_type, int) and if_type == 24:
+                continue             # skip loopback
+            name = cols.get(2)
+            if isinstance(name, (bytes, bytearray)):
+                name = name.decode("utf-8", errors="replace")
+            speed_raw  = cols.get(5)
+            adm_raw    = cols.get(7)
+            oper_raw   = cols.get(8)
+            rx_b       = cols.get(10)
+            tx_b       = cols.get(16)
+            rx_err     = cols.get(14)
+            tx_err     = cols.get(20)
+            rx_dis     = cols.get(13)
+            interfaces.append(SnmpInterface(
+                index=idx,
+                name=str(name).strip() if name else None,
+                speed_mbps=int(speed_raw) // 1_000_000 if isinstance(speed_raw, int) else None,
+                admin_status=_IF_STATUS_MAP.get(int(adm_raw)) if isinstance(adm_raw, int) else None,
+                oper_status=_IF_STATUS_MAP.get(int(oper_raw)) if isinstance(oper_raw, int) else None,
+                rx_bytes=int(rx_b) if isinstance(rx_b, int) else None,
+                tx_bytes=int(tx_b) if isinstance(tx_b, int) else None,
+                rx_errors=int(rx_err) if isinstance(rx_err, int) else None,
+                tx_errors=int(tx_err) if isinstance(tx_err, int) else None,
+                rx_discards=int(rx_dis) if isinstance(rx_dis, int) else None,
+            ))
+
         return SnmpResult(
             ok=True,
             sys_descr=sys_descr,
@@ -381,6 +428,7 @@ def _snmp_worker(ip: str, community: str, port: int, timeout: float) -> SnmpResu
             video_channels=video_channels,
             cpu_loads=cpu_loads,
             storage=storage,
+            interfaces=interfaces,
         )
 
     except OSError as exc:

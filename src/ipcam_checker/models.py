@@ -110,6 +110,19 @@ class SnmpStorageEntry(BaseModel):
     used_mb: float | None = None
 
 
+class SnmpInterface(BaseModel):
+    index: int
+    name: str | None = None           # ifDescr (e.g. "eth0")
+    speed_mbps: int | None = None     # ifSpeed / 1_000_000
+    admin_status: str | None = None   # "up" / "down"
+    oper_status: str | None = None
+    rx_bytes: int | None = None       # ifInOctets
+    tx_bytes: int | None = None       # ifOutOctets
+    rx_errors: int | None = None      # ifInErrors
+    tx_errors: int | None = None      # ifOutErrors
+    rx_discards: int | None = None    # ifInDiscards
+
+
 class SnmpResult(BaseModel):
     ok: bool
     sys_descr: str | None = None
@@ -119,6 +132,7 @@ class SnmpResult(BaseModel):
     video_channels: list[SnmpVideoChannel] = Field(default_factory=list)
     cpu_loads: list[int] = Field(default_factory=list)      # per-CPU load % (0-100)
     storage: list[SnmpStorageEntry] = Field(default_factory=list)
+    interfaces: list[SnmpInterface] = Field(default_factory=list)
     error: str | None = None
 
 
