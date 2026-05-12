@@ -69,6 +69,7 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             "-v", "quiet",
             "-print_format", "json",
             "-show_streams",
+            "-show_format",
             "-analyzeduration", str(analyze_us),
             "-probesize", "1000000",
             "-timeout", str(timeout_us),
@@ -109,7 +110,8 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
                 codec=None, bitrate_kbps=None, error="no video stream found",
             )
 
-        bitrate_raw = video.get("bit_rate")
+        # stream-level bit_rate is rarely set for RTSP; fall back to format-level
+        bitrate_raw = video.get("bit_rate") or data.get("format", {}).get("bit_rate")
         bitrate_kbps = round(int(bitrate_raw) / 1024, 2) if bitrate_raw else None
         fps = _parse_fps(video.get("r_frame_rate", ""))
         width = video.get("width")
