@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-import puresnmp
-
 from ipcam_checker._logging import get_logger
 from ipcam_checker.config import Settings
 from ipcam_checker.models import (
@@ -52,20 +50,6 @@ def _oid_col_index(oid: str, table_oid: str) -> tuple[int, str] | None:
         return None
 
 
-async def _bulkwalk(ip: str, community: str, base_oid: str, port: int, timeout: float):
-    """Walk all OIDs under base_oid using puresnmp bulkwalk."""
-    client = puresnmp.Client(
-        ip,
-        puresnmp.V2C(community),
-        port=port,
-        timeout=timeout,
-    )
-    results = []
-    async for varbind in client.bulkwalk([base_oid]):
-        results.append(varbind)
-    return results
-
-
 async def check_snmp(camera: CameraConfig, settings: Settings) -> SnmpResult:
     ip = camera.ip
     port = settings.snmp_port
@@ -73,6 +57,18 @@ async def check_snmp(camera: CameraConfig, settings: Settings) -> SnmpResult:
     timeout = settings.snmp_timeout_s
 
     _log.debug("snmp.start", extra={"camera": camera.name, "ip": ip})
+
+    try:
+        import puresnmp  # noqa: PLC0415
+    except ImportError:
+        return SnmpResult(ok=False, error="puresnmp not installed — run: pip install puresnmp")
+
+    async def _bulkwalk(base_oid: str):
+        client = puresnmp.Client(ip, puresnmp.V2C(community), port=port, timeout=timeout)
+        results = []
+        async for varbind in client.bulkwalk([base_oid]):
+            results.append(varbind)
+        return results
 
     try:
         # Fetch scalar system OIDs
@@ -93,7 +89,7 @@ async def check_snmp(camera: CameraConfig, settings: Settings) -> SnmpResult:
         # Walk temperature sensor table
         temp_rows: dict[str, dict[int, object]] = {}
         try:
-            for varbind in await _bulkwalk(ip, community, _OID_TEMP_TABLE, port, timeout):
+            for varbind in await _bulkwalk(_OID_TEMP_TABLE):
                 oid = str(varbind.oid)
                 parsed = _oid_col_index(oid, _OID_TEMP_TABLE)
                 if parsed is None:
@@ -129,7 +125,7 @@ async def check_snmp(camera: CameraConfig, settings: Settings) -> SnmpResult:
         # Walk video channel table
         video_rows: dict[str, dict[int, object]] = {}
         try:
-            for varbind in await _bulkwalk(ip, community, _OID_VIDEO_TABLE, port, timeout):
+            for varbind in await _bulkwalk(_OID_VIDEO_TABLE):
                 oid = str(varbind.oid)
                 parsed = _oid_col_index(oid, _OID_VIDEO_TABLE)
                 if parsed is None:
