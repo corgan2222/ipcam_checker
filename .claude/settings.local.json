@@ -4,7 +4,13 @@
       "Bash('@ *)",
       "Bash(Out-Null)",
       "Bash(git init *)",
-      "mcp__plugin_context-mode_context-mode__ctx_batch_execute"
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "mcp__plugin_context-mode_context-mode__ctx_execute",
+      "Bash(Get-ChildItem -Path \"tests\\\\conftest.py\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }
