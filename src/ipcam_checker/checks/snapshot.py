@@ -119,10 +119,10 @@ def _fetch_rtsp_frame(camera: CameraConfig, rtsp_url: str, settings: Settings) -
 def _fetch_and_encode(camera: CameraConfig, settings: Settings) -> str | None:
     if camera.snapshot_url:
         return _fetch_http(camera, settings)
-    # fall back to grabbing a frame from RTSP — prefer sub stream
-    rtsp_url = camera.rtsp_url_sub or camera.rtsp_url_main
-    if rtsp_url:
-        return _fetch_rtsp_frame(camera, rtsp_url, settings)
+    if settings.snapshot_rtsp_fallback:
+        rtsp_url = camera.rtsp_url_sub or camera.rtsp_url_main
+        if rtsp_url:
+            return _fetch_rtsp_frame(camera, rtsp_url, settings)
     return None
 
 
@@ -131,7 +131,8 @@ async def check_snapshot(
     settings: Settings,
     executor: ThreadPoolExecutor,
 ) -> str | None:
-    if not camera.snapshot_url and not camera.rtsp_url_sub and not camera.rtsp_url_main:
+    has_rtsp = camera.rtsp_url_sub or camera.rtsp_url_main
+    if not camera.snapshot_url and not (settings.snapshot_rtsp_fallback and has_rtsp):
         _log.debug("snapshot.skip", extra={"camera": camera.name, "ip": camera.ip, "reason": "no url"})
         return None
     loop = asyncio.get_running_loop()

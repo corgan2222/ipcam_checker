@@ -20,6 +20,7 @@ class Settings(BaseModel):
     snapshot_timeout_s: float = 5.0
     snapshot_width: int = 600
     snapshot_height: int = 400
+    snapshot_rtsp_fallback: bool = True  # grab frame via ffmpeg when no snapshot_url
 
     # Bulk concurrency
     max_concurrent_cameras: int = 50
