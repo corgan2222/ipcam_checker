@@ -7,13 +7,13 @@ from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from ipcam_checker._logging import get_logger
-from ipcam_checker.checks.onvif_check import check_onvif
-from ipcam_checker.checks.vapix import check_vapix
-from ipcam_checker.checks.snmp_check import check_snmp
-from ipcam_checker.checks.ping import check_ping
-from ipcam_checker.checks.ports import scan_ports
-from ipcam_checker.checks.rtsp import check_rtsp
-from ipcam_checker.checks.snapshot import check_snapshot
+from ipcam_checker.checks.check_onvif import check_onvif
+from ipcam_checker.checks.check_vapix import check_vapix
+from ipcam_checker.checks.check_snmp_axis import check_snmp_axis
+from ipcam_checker.checks.check_ping import check_ping
+from ipcam_checker.checks.check_ports import scan_ports
+from ipcam_checker.checks.check_rtsp import check_rtsp
+from ipcam_checker.checks.check_snapshot import check_snapshot
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig, CameraResult, PingResult
 from ipcam_checker.plugins.base import AbstractPlugin
@@ -23,6 +23,11 @@ _log = get_logger("checker")
 
 async def _resolved(value):
     return value
+
+
+def _effective(camera_override: bool | None, global_enabled: bool) -> bool:
+    """Return effective flag: camera override wins if set, else fall back to global."""
+    return camera_override if camera_override is not None else global_enabled
 
 
 async def check_camera(
@@ -41,7 +46,7 @@ async def check_camera(
     with ThreadPoolExecutor(max_workers=settings.thread_pool_size) as executor:
         ping = (
             await check_ping(camera.ip, settings, executor)
-            if settings.check_ping_enabled else None
+            if _effective(camera.check_ping, settings.check_ping_enabled) else None
         )
 
         main_stream = None
@@ -55,34 +60,49 @@ async def check_camera(
         # Run remaining checks when ping is disabled (unknown) or succeeded
         run_checks = (ping is None) or ping.ok
         if run_checks:
+            do_rtsp     = _effective(camera.check_rtsp,     settings.check_rtsp_enabled)
+            do_snapshot = _effective(camera.check_snapshot, settings.check_snapshot_enabled)
+            do_ports    = _effective(camera.check_ports,    settings.check_ports_enabled)
+            do_onvif    = _effective(camera.check_onvif,    settings.check_onvif_enabled)
+            do_vapix    = _effective(camera.check_vapix,    settings.check_vapix_enabled)
+
+            # SNMP: camera.check_snmp is a str | None
+            #   None  → inherit global (treat as "Axis" if check_snmp_enabled, else None)
+            #   "Axis" → always use Axis implementation
+            #   "" / any other falsy str → disabled
+            snmp_impl = camera.check_snmp
+            if snmp_impl is None:
+                snmp_impl = "Axis" if settings.check_snmp_enabled else None
+
             main_coro = (
                 check_rtsp(camera, camera.rtsp_url_main, settings, executor)
-                if (settings.check_rtsp_enabled and camera.rtsp_url_main) else _resolved(None)
+                if (do_rtsp and camera.rtsp_url_main) else _resolved(None)
             )
             sub_coro = (
                 check_rtsp(camera, camera.rtsp_url_sub, settings, executor)
-                if (settings.check_rtsp_enabled and camera.rtsp_url_sub) else _resolved(None)
+                if (do_rtsp and camera.rtsp_url_sub) else _resolved(None)
             )
             snap_coro = (
                 check_snapshot(camera, settings, executor)
-                if settings.check_snapshot_enabled else _resolved(None)
+                if do_snapshot else _resolved(None)
             )
             port_coro = (
                 scan_ports(camera.ip, settings)
-                if settings.check_ports_enabled else _resolved([])
+                if do_ports else _resolved([])
             )
             onvif_coro = (
                 check_onvif(camera, settings, executor)
-                if settings.check_onvif_enabled else _resolved(None)
+                if do_onvif else _resolved(None)
             )
             vapix_coro = (
                 check_vapix(camera, settings)
-                if (settings.check_vapix_enabled and camera.check_vapix) else _resolved(None)
+                if do_vapix else _resolved(None)
             )
             snmp_coro = (
-                check_snmp(camera, settings)
-                if (settings.check_snmp_enabled and camera.check_snmp) else _resolved(None)
+                check_snmp_axis(camera, settings)
+                if snmp_impl == "Axis" else _resolved(None)
             )
+
             main_stream, sub_stream, snapshot_base64, port_results, onvif_result, vapix_result, snmp_result = await asyncio.gather(
                 main_coro, sub_coro, snap_coro, port_coro, onvif_coro, vapix_coro, snmp_coro,
             )

@@ -37,7 +37,7 @@ CAMERAS = [
         vapix_username="axisuser",
         vapix_password="REDACTED",
         check_vapix=False,
-        check_snmp=True,
+        check_snmp="Axis",
         snmp_community_read="public"
     )#,
     # CameraConfig(

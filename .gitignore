@@ -13,3 +13,6 @@ __pycache__/
 *.pyc
 logs/
 docs/superpowers/
+ToDo.md
+.claude/settings.local.json
+nul

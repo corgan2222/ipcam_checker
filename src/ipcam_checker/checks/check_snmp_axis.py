@@ -439,7 +439,7 @@ def _snmp_worker(ip: str, community: str, port: int, timeout: float) -> SnmpResu
 
 # ── Async entry point ─────────────────────────────────────────────────────────
 
-async def check_snmp(camera: CameraConfig, settings: Settings) -> SnmpResult:
+async def check_snmp_axis(camera: CameraConfig, settings: Settings) -> SnmpResult:
     ip        = camera.ip
     port      = settings.snmp_port
     community = camera.snmp_community_read

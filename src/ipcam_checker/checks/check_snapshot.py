@@ -13,7 +13,7 @@ from PIL import Image
 
 from ipcam_checker._ffmpeg import ensure_ffmpeg
 from ipcam_checker._logging import get_logger
-from ipcam_checker.checks.rtsp import _build_rtsp_url
+from ipcam_checker.checks.check_rtsp import _build_rtsp_url
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig
 

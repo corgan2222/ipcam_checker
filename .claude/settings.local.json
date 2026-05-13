@@ -10,7 +10,32 @@
       "mcp__plugin_context-mode_context-mode__ctx_search",
       "mcp__plugin_context-mode_context-mode__ctx_execute",
       "Bash(Get-ChildItem -Path \"tests\\\\conftest.py\" -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(dir /s /b *.py)",
+      "Bash(python -c \"from ipcam_checker.config import Settings; s = Settings\\(\\); print\\(f'Settings created: {s}'\\)\")",
+      "Bash(python -c \"from ipcam_checker.config import Settings; s = Settings\\(\\); assert s.ping_count == 4; assert s.bin_dir == Path\\('bin'\\); print\\('OK'\\)\")",
+      "Bash(python -c \"from pathlib import Path; from ipcam_checker.config import Settings; s = Settings\\(\\); assert s.ping_count == 4; assert s.bin_dir == Path\\('bin'\\); print\\('OK'\\)\")",
+      "Bash(python -c \"from pathlib import Path; from ipcam_checker._ffmpeg import ensure_ffmpeg; ff, fp = ensure_ffmpeg\\(Path\\('bin'\\)\\); print\\('ffmpeg:', ff\\); print\\('ffprobe:', fp\\); print\\('exists:', ff.exists\\(\\), fp.exists\\(\\)\\)\")",
+      "Bash(cd /d D:\\\\Coding\\\\git-corgan\\\\ipcc)",
+      "Bash(python -c \"from ipcam_checker._ffmpeg import ensure_ffmpeg; from pathlib import Path; ff, fp = ensure_ffmpeg\\(Path\\('bin'\\)\\); assert ff.exists\\(\\); assert fp.exists\\(\\); print\\('OK'\\)\")",
+      "Bash(python -m pytest tests/test_ping.py -v)",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file",
+      "Bash(pytest tests/test_ping.py -v --tb=short)",
+      "Bash(python -m pytest tests/test_rtsp.py -v)",
+      "Bash(python -c \"from ipcam_checker.plugins import AbstractPlugin, PluginRegistry; print\\('ok'\\)\")",
+      "Bash(python -m pytest tests/test_checker.py -v)",
+      "Bash(pytest tests/test_checker.py -v --tb=short)",
+      "Bash(python -m pytest -v --tb=short)",
+      "Bash(pip install *)",
+      "Bash(hatch build *)",
+      "Bash(python -c \"from ipcam_checker import check_camera, check_cameras, CameraConfig, Settings; print\\('OK'\\)\")",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:docs.gufolabs.com)",
+      "Bash(git filter-branch *)",
+      "Bash(git stash *)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter \"python -c \\\\\"import sys; msg=sys.stdin.read\\(\\); print\\('\\\\n'.join\\(l for l in msg.splitlines\\(\\) if not l.startswith\\('Co-Authored-By:'\\)\\).rstrip\\(\\)\\)\\\\\"\" -- --all)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git mv *)"
     ]
   }
 }

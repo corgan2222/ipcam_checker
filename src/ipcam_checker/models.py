@@ -22,9 +22,16 @@ class CameraConfig(BaseModel):
     vapix_ssl: bool = False
     vapix_username: str = ""
     vapix_password: str = ""
-    check_vapix: bool = False
-    check_snmp: bool = False
     snmp_community_read: str = "public"
+    # Per-camera overrides (None = inherit global Settings flag)
+    check_ping: bool | None = None
+    check_rtsp: bool | None = None
+    check_snapshot: bool | None = None
+    check_ports: bool | None = None
+    check_onvif: bool | None = None
+    check_vapix: bool | None = None
+    # check_snmp: None=inherit global, "Axis"=use Axis SNMP implementation
+    check_snmp: str | None = None
 
 
 class PingResult(BaseModel):
