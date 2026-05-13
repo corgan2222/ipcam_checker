@@ -18,6 +18,11 @@ dependencies = [
     "python-json-logger>=2.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/corgan2222/ipcam_checker"
+Repository = "https://github.com/corgan2222/ipcam_checker"
+Issues = "https://github.com/corgan2222/ipcam_checker/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
@@ -35,6 +40,7 @@ onvif = [
 discovery = [
     "zeroconf>=0.115",
 ]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/ipcam_checker"]
 
