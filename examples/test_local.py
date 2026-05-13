@@ -1,9 +1,26 @@
-"""Live test against local cameras."""
+"""Live test against local cameras.
+
+Credentials are read from environment variables so no secrets end up in source:
+
+    AXIS_ONVIF_PASSWORD   onvif password for the Axis camera
+    AXIS_VAPIX_PASSWORD   vapix password for the Axis camera
+    REOLINK_PASSWORD      password for ReoLink cameras
+
+Example (PowerShell):
+    $env:AXIS_ONVIF_PASSWORD="<your-axis-onvif-pw>"
+    $env:AXIS_VAPIX_PASSWORD="<your-axis-vapix-pw>"
+    $env:REOLINK_PASSWORD="<your-reolink-pw>"
+    python examples/test_local.py
+"""
 import asyncio
-import json
+import os
 from pathlib import Path
 
 from ipcam_checker import CameraConfig, Settings, check_cameras, setup_logging
+
+_AXIS_ONVIF_PW  = os.environ.get("AXIS_ONVIF_PASSWORD", "")
+_AXIS_VAPIX_PW  = os.environ.get("AXIS_VAPIX_PASSWORD", "")
+_REOLINK_PW     = os.environ.get("REOLINK_PASSWORD", "")
 
 CAMERAS = [
     CameraConfig(
@@ -16,54 +33,68 @@ CAMERAS = [
         check_vapix=False,
         check_snmp="False",
     ),
-    # CameraConfig(
-    #     name="Sony-184",
-    #     ip="192.168.2.184",
-    #     rtsp_port=554,
-    #     rtsp_url_main="/media/video1",
-    #     rtsp_url_sub="/media/video2",
-    # ),
-    # CameraConfig(
-    #     name="Sony-187",
-    #     ip="192.168.2.187",
-    #     rtsp_port=554,
-    #     rtsp_url_main="/media/video1",
-    #     rtsp_url_sub="/media/video2",
-    # ),
+    CameraConfig(
+        name="Sony-184",
+        ip="192.168.2.184",
+        rtsp_port=554,
+        rtsp_url_main="/media/video1",
+        rtsp_url_sub="/media/video2",
+        check_vapix=False,     
+        check_snmp="False",
+    ),
+    CameraConfig(
+        name="Sony-187",
+        ip="192.168.2.187",
+        rtsp_port=554,
+        rtsp_url_main="/media/video1",
+        rtsp_url_sub="/media/video2",
+        check_onvif=False,
+        check_vapix=False,     
+        check_snmp="False",
+    ),
     CameraConfig(
         name="Axis-170",
         ip="192.168.2.170",
         rtsp_url_main="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=1920x1080",
         rtsp_url_sub="rtsp://192.168.2.170/axis-media/media.amp?videocodec=h264&camera=1&resolution=640x480",
         onvif_username="onvifadmin",
-        onvif_password="REDACTED",
+        onvif_password=_AXIS_ONVIF_PW,
         vapix_username="axisuser",
-        vapix_password="REDACTED",
+        vapix_password=_AXIS_VAPIX_PW,
         check_onvif=True,
         check_vapix=True,
         check_snmp="Axis",
         snmp_community_read="public",
         snapshot_url="https://192.168.2.170/jpg/image.jpg"
-    )#,
-    # CameraConfig(
-    #     name="ReoLinkFront",
-    #     ip="192.168.2.53",
-    #     rtsp_url_main="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_main",
-    #     rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.53:554/h264Preview_01_sub",
-    # ),
-    # CameraConfig(
-    #     name="ReoLinkFront-test",
-    #     ip="192.168.2.53",
-    #     rtsp_url_sub="/h264Preview_01_sub",
-    #     rtsp_username="admin",
-    #     rtsp_password="REDACTED",
-    # ),
-    # CameraConfig(
-    #     name="FrontOld",
-    #     ip="192.168.2.50",
-    #     rtsp_url_main=None,
-    #     rtsp_url_sub="rtsp://admin:REDACTED@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
-    # ),
+    ),
+    CameraConfig(
+        name="ReoLinkFront",
+        ip="192.168.2.53",
+        rtsp_url_main=f"rtsp://admin:{_REOLINK_PW}@192.168.2.53:554/h264Preview_01_main",
+        rtsp_url_sub=f"rtsp://admin:{_REOLINK_PW}@192.168.2.53:554/h264Preview_01_sub",
+        check_onvif=False,
+        check_vapix=False,    
+        check_snmp="False", 
+    ),
+    CameraConfig(
+        name="ReoLinkFront-test",
+        ip="192.168.2.53",
+        rtsp_url_sub="/h264Preview_01_sub",
+        rtsp_username="admin",
+        rtsp_password=_REOLINK_PW,
+        check_onvif=False,
+        check_vapix=False,  
+        check_snmp="False",   
+    ),
+    CameraConfig(
+        name="FrontOld",
+        ip="192.168.2.50",
+        rtsp_url_main=None,
+        rtsp_url_sub=f"rtsp://admin:{_REOLINK_PW}@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
+        check_onvif=False,
+        check_vapix=False,    
+        check_snmp="False", 
+    ),
 ]
 
 SETTINGS = Settings(
