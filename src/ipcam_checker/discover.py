@@ -97,12 +97,18 @@ def _mdns_browse(
             info = zc.get_service_info(type_, name, timeout=2000)
             if not info:
                 return
-            # Resolve IP addresses
+            # Resolve IP addresses, drop link-local (169.254.x.x) and loopback
             try:
                 addrs: list[str] = info.parsed_addresses()
             except AttributeError:
-                import struct
                 addrs = [socket.inet_ntoa(a) for a in info.addresses]
+            addrs = [
+                a for a in addrs
+                if not ipaddress.ip_address(a).is_link_local
+                and not ipaddress.ip_address(a).is_loopback
+            ]
+            if not addrs:
+                return
 
             # Decode TXT record
             txt: dict[str, str] = {}
