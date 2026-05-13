@@ -168,6 +168,32 @@ class OnvifResult(BaseModel):
     error: str | None = None
 
 
+class MdnsService(BaseModel):
+    service_type: str           # e.g. "_axis-video._tcp"
+    name: str                   # e.g. "AXIS P1435-LE - ACCC8E123456._axis-video._tcp.local."
+    port: int
+    txt: dict[str, str] = Field(default_factory=dict)   # TXT record key/value pairs
+
+
+class DiscoveredDevice(BaseModel):
+    ip: str
+    open_ports: list[int] = Field(default_factory=list)
+    mdns_services: list[MdnsService] = Field(default_factory=list)
+
+    @property
+    def likely_camera(self) -> bool:
+        """True when at least one strong camera signal is present."""
+        _CAMERA_MDNS = {"_axis-video._tcp", "_onvif._tcp", "_rtsp._tcp"}
+        if any(s.service_type in _CAMERA_MDNS for s in self.mdns_services):
+            return True
+        # RTSP port alone is a strong signal; port 80 alone is not
+        if 554 in self.open_ports:
+            return True
+        if 8554 in self.open_ports:
+            return True
+        return False
+
+
 class CheckTiming(BaseModel):
     name: str           # "ping", "rtsp_main", "rtsp_sub", "snapshot", "ports", "onvif", "vapix", "snmp"
     wall_ms: float
