@@ -41,14 +41,32 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
         username = camera.onvif_username or camera.rtsp_username
         password = camera.onvif_password or camera.rtsp_password
         transport = Transport(timeout=settings.onvif_timeout_s)
-        cam = ONVIFCamera(
-            camera.ip,
-            camera.onvif_port,
-            username,
-            password,
-            transport=transport,
-            adjust_time=True,  # sync timestamps to camera clock, prevents auth failures on time drift
-        )
+
+        # Try with adjust_time=True first (compensates for clock drift between host and camera).
+        # If that itself triggers an auth error, fall back to adjust_time=False so the caller
+        # gets a clean "wrong credentials" message rather than a confusing internal failure.
+        try:
+            cam = ONVIFCamera(
+                camera.ip,
+                camera.onvif_port,
+                username,
+                password,
+                transport=transport,
+                adjust_time=True,
+            )
+        except Exception as adj_exc:
+            _log.debug(
+                "onvif.adjust_time_failed",
+                extra={"camera": camera.name, "error": str(adj_exc)},
+            )
+            cam = ONVIFCamera(
+                camera.ip,
+                camera.onvif_port,
+                username,
+                password,
+                transport=transport,
+                adjust_time=False,
+            )
 
         # Device information
         dev_info = cam.devicemgmt.GetDeviceInformation()
@@ -155,11 +173,19 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
         )
 
     except Exception as exc:
+        err_str = str(exc)
+        # Give actionable hints for the most common ONVIF auth failure
+        if "not authorized" in err_str.lower() or "sender" in err_str.lower():
+            err_str = (
+                f"{exc}  "
+                "(hint: check onvif_username/onvif_password; ensure the ONVIF user "
+                "has Operator or Administrator role on the camera)"
+            )
         _log.warning(
             "onvif.fail",
-            extra={"camera": camera.name, "ip": camera.ip, "error": str(exc)},
+            extra={"camera": camera.name, "ip": camera.ip, "error": err_str},
         )
-        return OnvifResult(ok=False, error=str(exc))
+        return OnvifResult(ok=False, error=err_str)
 
 
 async def check_onvif(
