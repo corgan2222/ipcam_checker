@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "ipcam-checker"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Async IP camera health checker: ping, RTSP streams, snapshots, plugin system"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -40,6 +40,12 @@ onvif = [
 discovery = [
     "zeroconf>=0.115",
 ]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/ipcam_checker/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ipcam_checker"]
