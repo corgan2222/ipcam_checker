@@ -293,6 +293,67 @@ settings.configure_logging()
 
 ---
 
+## Example output
+
+### Sony network camera (SNC-EM600)
+
+```
+==================================================
+  Sony-182  (192.168.2.182)
+==================================================
+  ping:    OK  latency=2.551ms  loss=0.0%
+  main:    OK  1280x720  25.0fps  h264 (High)  yuvj420p  Level31  929.99kbps  title='Sony RTSP Server'  probe=100
+         rtp:  pkts=76  lost=0(0.0%)  jitter=0.0/0.0ms  avg=929.99kbps
+  sub :    OK  640x480  10.0fps  h264 (Main)  yuvj420p  Level30  133.68kbps  title='Sony RTSP Server'  probe=100
+         rtp:  pkts=31  lost=0(0.0%)  jitter=20.0/20.0ms  avg=133.68kbps
+  ports:   80/tcp  554/tcp  161/udp
+  onvif:   OK  ONVIF 17.6  Sony  SNC-EM600  FW:3.2.0  SN:5233423
+           caps: PTZ  Analytics
+  vapix:   disabled
+  snmp:    disabled
+  timing:  camera=4290.7ms  cpu=1453.1ms  threads=1→19
+           ping         wall=221.6ms  cpu=31.2ms
+           snapshot     wall=0.3ms   cpu=0.0ms
+           onvif        wall=1021.4ms cpu=875.0ms
+           ports        wall=2008.3ms cpu=875.0ms
+           rtsp_main    wall=3617.1ms cpu=968.8ms
+           rtsp_sub     wall=3710.4ms cpu=968.8ms
+```
+
+### Axis camera (P1435-LE) — ONVIF + VAPIX + SNMP
+
+```
+==================================================
+  Axis-170  (192.168.2.170)
+==================================================
+  ping:    OK  latency=1.747ms  loss=0.0%
+  main:    OK  1920x1080  25.0fps  h264 (Main)  yuvj420p  Level41  10482.03kbps  title='Session streamed with GStreamer'  comment='rtsp-server'  probe=100
+         rtp:  pkts=76  lost=0(0.0%)  jitter=0.008/0.022ms  avg=10482.03kbps
+  sub :    OK  640x480  25.0fps  h264 (Main)  yuvj420p  Level41  533.35kbps  title='Session streamed with GStreamer'  comment='rtsp-server'  probe=100
+         rtp:  pkts=76  lost=0(0.0%)  jitter=0.008/0.022ms  avg=533.35kbps
+  ports:   80/tcp  443/tcp  554/tcp  161/udp
+  onvif:   OK  ONVIF 2.21  AXIS  P1435-LE  FW:9.80.105  SN:ACCC8ED43FB1
+           profiles: profile_1 h264(H264  640x400  25fps  2147483647kbps)  profile_1 jpeg(H264  640x400  25fps  2147483647kbps)
+           caps: Analytics
+  vapix:   OK  Image Sensor=29.0°C  Heater=26.8°C  IR led=26.4°C  IR led tele=26.4°C
+           heater: H0=Stopped
+  snmp:    OK  uptime=15065s
+           descr:  ; AXIS P1435-LE; Network Camera; 9.80.105; Apr 03 2025 15:51; 70D.1; 1;
+           temp: 1=29°C(ok)  2=26°C(ok)  3=26°C(ok)  4=26°C(ok)
+           iface: eth0  100Mbps  rx=26.0MB  tx=52.6MB  rx_err=16  rx_drop=18
+  timing:  camera=8340.0ms  cpu=1468.8ms  threads=1→5
+           ping         wall=219.4ms  cpu=15.6ms
+           vapix        wall=519.9ms  cpu=765.6ms
+           snmp         wall=797.3ms  cpu=734.4ms
+           snapshot     wall=1366.2ms cpu=1296.9ms
+           ports        wall=2352.6ms cpu=1296.9ms
+           rtsp_sub     wall=3961.0ms cpu=1390.6ms
+           rtsp_main    wall=4202.9ms cpu=1421.9ms
+           onvif        wall=8101.3ms cpu=1421.9ms
+```
+
+---
+
 ## Requirements
 
 - Python 3.13+
