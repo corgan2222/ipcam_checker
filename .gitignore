@@ -1,3 +1,7 @@
+# Credentials — never commit
+.env
+examples/.env
+
 bin/ffmpeg*
 bin/ffprobe*
 bin/ffplay*
@@ -12,6 +16,7 @@ __pycache__/
 .code-review-graph/
 *.pyc
 logs/
+examples/logs/
 docs/superpowers/
 ToDo.md
 .claude/settings.local.json

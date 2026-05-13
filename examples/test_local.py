@@ -1,26 +1,26 @@
 """Live test against local cameras.
 
-Credentials are read from environment variables so no secrets end up in source:
+Credentials are loaded from an .env file (never committed).
+Copy .env.example → .env and fill in your values:
 
-    AXIS_ONVIF_PASSWORD   onvif password for the Axis camera
-    AXIS_VAPIX_PASSWORD   vapix password for the Axis camera
-    REOLINK_PASSWORD      password for ReoLink cameras
-
-Example (PowerShell):
-    $env:AXIS_ONVIF_PASSWORD="<your-axis-onvif-pw>"
-    $env:AXIS_VAPIX_PASSWORD="<your-axis-vapix-pw>"
-    $env:REOLINK_PASSWORD="<your-reolink-pw>"
-    python examples/test_local.py
+    AXIS_ONVIF_PASSWORD=yourpassword
+    AXIS_VAPIX_PASSWORD=yourpassword
+    REOLINK_PASSWORD=yourpassword
 """
+
 import asyncio
 import os
 from pathlib import Path
 
-from ipcam_checker import CameraConfig, Settings, check_cameras, setup_logging
+from dotenv import load_dotenv
 
-_AXIS_ONVIF_PW  = os.environ.get("AXIS_ONVIF_PASSWORD", "")
-_AXIS_VAPIX_PW  = os.environ.get("AXIS_VAPIX_PASSWORD", "")
-_REOLINK_PW     = os.environ.get("REOLINK_PASSWORD", "")
+load_dotenv(Path(__file__).parent / ".env")
+
+from ipcam_checker import CameraConfig, Settings, check_cameras, setup_logging  # noqa: E402
+
+_AXIS_ONVIF_PW = os.environ.get("AXIS_ONVIF_PASSWORD", "")
+_AXIS_VAPIX_PW = os.environ.get("AXIS_VAPIX_PASSWORD", "")
+_REOLINK_PW = os.environ.get("REOLINK_PASSWORD", "")
 
 CAMERAS = [
     CameraConfig(
@@ -39,7 +39,7 @@ CAMERAS = [
         rtsp_port=554,
         rtsp_url_main="/media/video1",
         rtsp_url_sub="/media/video2",
-        check_vapix=False,     
+        check_vapix=False,
         check_snmp="False",
     ),
     CameraConfig(
@@ -49,7 +49,7 @@ CAMERAS = [
         rtsp_url_main="/media/video1",
         rtsp_url_sub="/media/video2",
         check_onvif=False,
-        check_vapix=False,     
+        check_vapix=False,
         check_snmp="False",
     ),
     CameraConfig(
@@ -65,7 +65,7 @@ CAMERAS = [
         check_vapix=True,
         check_snmp="Axis",
         snmp_community_read="public",
-        snapshot_url="https://192.168.2.170/jpg/image.jpg"
+        snapshot_url="https://192.168.2.170/jpg/image.jpg",
     ),
     CameraConfig(
         name="ReoLinkFront",
@@ -73,8 +73,8 @@ CAMERAS = [
         rtsp_url_main=f"rtsp://admin:{_REOLINK_PW}@192.168.2.53:554/h264Preview_01_main",
         rtsp_url_sub=f"rtsp://admin:{_REOLINK_PW}@192.168.2.53:554/h264Preview_01_sub",
         check_onvif=False,
-        check_vapix=False,    
-        check_snmp="False", 
+        check_vapix=False,
+        check_snmp="False",
     ),
     CameraConfig(
         name="ReoLinkFront-test",
@@ -83,8 +83,8 @@ CAMERAS = [
         rtsp_username="admin",
         rtsp_password=_REOLINK_PW,
         check_onvif=False,
-        check_vapix=False,  
-        check_snmp="False",   
+        check_vapix=False,
+        check_snmp="False",
     ),
     CameraConfig(
         name="FrontOld",
@@ -92,8 +92,8 @@ CAMERAS = [
         rtsp_url_main=None,
         rtsp_url_sub=f"rtsp://admin:{_REOLINK_PW}@192.168.2.50:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif",
         check_onvif=False,
-        check_vapix=False,    
-        check_snmp="False", 
+        check_vapix=False,
+        check_snmp="False",
     ),
 ]
 
@@ -112,7 +112,7 @@ SETTINGS = Settings(
     max_concurrent_cameras=10,
     snapshot_rtsp_fallback=False,
     log_level="DEBUG",
-    log_file=Path("logs/ipcam_test.log"),    
+    log_file=Path("logs/ipcam_test.log"),
 )
 
 
@@ -185,10 +185,15 @@ def _fmt(result) -> str:
         device = "  ".join(filter(None, [onvif.manufacturer, onvif.model]))
         fw = f"  FW:{onvif.firmware_version}" if onvif.firmware_version else ""
         sn = f"  SN:{onvif.serial_number}" if onvif.serial_number else ""
-        caps = "  ".join(filter(None, [
-            "PTZ" if onvif.ptz_supported else None,
-            "Analytics" if onvif.analytics_supported else None,
-        ]))
+        caps = "  ".join(
+            filter(
+                None,
+                [
+                    "PTZ" if onvif.ptz_supported else None,
+                    "Analytics" if onvif.analytics_supported else None,
+                ],
+            )
+        )
         lines.append(f"  onvif:   OK  {ver}  {device}{fw}{sn}")
         if onvif.profiles:
             prof_parts = []
@@ -212,8 +217,7 @@ def _fmt(result) -> str:
         lines.append(f"  vapix:   FAIL  err={vapix.error}")
     else:
         sensor_parts = [
-            f"{s.name or s.id}={s.celsius}°C"
-            for s in vapix.sensors if s.celsius is not None
+            f"{s.name or s.id}={s.celsius}°C" for s in vapix.sensors if s.celsius is not None
         ]
         lines.append(f"  vapix:   OK  {'  '.join(sensor_parts) if sensor_parts else 'no sensors'}")
         if vapix.heaters:
@@ -238,7 +242,8 @@ def _fmt(result) -> str:
         if snmp.temp_sensors:
             temp_parts = [
                 f"{s.sensor_type or s.sensor_id}={s.celsius}°C({s.status})"
-                for s in snmp.temp_sensors if s.celsius is not None
+                for s in snmp.temp_sensors
+                if s.celsius is not None
             ]
             if temp_parts:
                 lines.append(f"           temp: {'  '.join(temp_parts)}")
@@ -248,7 +253,9 @@ def _fmt(result) -> str:
         if snmp.storage:
             for s in snmp.storage:
                 if s.total_mb and s.total_mb > 0:
-                    used_pct = f"  {round(s.used_mb / s.total_mb * 100)}%" if s.used_mb is not None else ""
+                    used_pct = (
+                        f"  {round(s.used_mb / s.total_mb * 100)}%" if s.used_mb is not None else ""
+                    )
                     lines.append(
                         f"           store: [{s.storage_type or '?'}] {s.descr or ''}  "
                         f"{s.used_mb}/{s.total_mb} MB{used_pct}"
@@ -256,8 +263,8 @@ def _fmt(result) -> str:
         if snmp.interfaces:
             for iface in snmp.interfaces:
                 spd = f"  {iface.speed_mbps}Mbps" if iface.speed_mbps else ""
-                rx  = f"  rx={iface.rx_bytes/1e6:.1f}MB" if iface.rx_bytes is not None else ""
-                tx  = f"  tx={iface.tx_bytes/1e6:.1f}MB" if iface.tx_bytes is not None else ""
+                rx = f"  rx={iface.rx_bytes/1e6:.1f}MB" if iface.rx_bytes is not None else ""
+                tx = f"  tx={iface.tx_bytes/1e6:.1f}MB" if iface.tx_bytes is not None else ""
                 err_parts = []
                 if iface.rx_errors:
                     err_parts.append(f"rx_err={iface.rx_errors}")
@@ -270,8 +277,10 @@ def _fmt(result) -> str:
 
     t = result.telemetry
     if t:
-        lines.append(f"  timing:  camera={t.wall_ms}ms  cpu={t.cpu_ms}ms"
-                     f"  threads={t.threads_at_start}→{t.threads_at_end}")
+        lines.append(
+            f"  timing:  camera={t.wall_ms}ms  cpu={t.cpu_ms}ms"
+            f"  threads={t.threads_at_start}→{t.threads_at_end}"
+        )
         for c in t.checks:
             cpu = f"  cpu={c.cpu_ms}ms" if c.cpu_ms is not None else ""
             lines.append(f"           {c.name:<12} wall={c.wall_ms}ms{cpu}")
@@ -281,6 +290,7 @@ def _fmt(result) -> str:
 
 async def main() -> None:
     import time as _time
+
     setup_logging(
         level=SETTINGS.log_level,
         log_file=SETTINGS.log_file,
@@ -300,7 +310,9 @@ async def main() -> None:
     for r in results:
         t = r.telemetry
         if t:
-            print(f"  {r.name}: {t.wall_ms}ms  cpu={t.cpu_ms}ms  threads={t.threads_at_start}→{t.threads_at_end}")
+            print(
+                f"  {r.name}: {t.wall_ms}ms  cpu={t.cpu_ms}ms  threads={t.threads_at_start}→{t.threads_at_end}"
+            )
     print(f"{'='*50}")
     print(f"\nLog written to: {SETTINGS.log_file}")
 
