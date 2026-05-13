@@ -57,14 +57,15 @@ class Settings(BaseModel):
     # Logging
     log_level: str = "INFO"
     log_file: Path | None = None
-    log_json: bool = True           # JSON format for log file (Loki/Promtail-ready)
-    log_console: bool = False       # print log to stderr (useful during development)
-    loki_url: str | None = None     # e.g. "http://loki:3100/loki/api/v1/push"
+    log_json: bool = True  # JSON format for log file (Loki/Promtail-ready)
+    log_console: bool = False  # print log to stderr (useful during development)
+    loki_url: str | None = None  # e.g. "http://loki:3100/loki/api/v1/push"
     loki_labels: dict[str, Any] = Field(default_factory=dict)
 
     def configure_logging(self) -> None:
         """Apply logging settings. Convenience wrapper around setup_logging()."""
         from ipcam_checker._logging import setup_logging
+
         setup_logging(
             level=self.log_level,
             log_file=self.log_file,

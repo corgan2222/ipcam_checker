@@ -3,18 +3,18 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
-from typing import AsyncGenerator
+from datetime import UTC, datetime
 
 from ipcam_checker._logging import get_logger
 from ipcam_checker.checks.check_onvif import check_onvif
-from ipcam_checker.checks.check_vapix import check_vapix
-from ipcam_checker.checks.check_snmp_axis import check_snmp_axis
 from ipcam_checker.checks.check_ping import check_ping
 from ipcam_checker.checks.check_ports import scan_ports
 from ipcam_checker.checks.check_rtsp import check_rtsp
 from ipcam_checker.checks.check_snapshot import check_snapshot
+from ipcam_checker.checks.check_snmp_axis import check_snmp_axis
+from ipcam_checker.checks.check_vapix import check_vapix
 from ipcam_checker.config import Settings
 from ipcam_checker.models import (
     CameraConfig,
@@ -40,13 +40,15 @@ def _effective(camera_override: bool | None, global_enabled: bool) -> bool:
 async def _timed(name: str, coro, timings: list[CheckTiming]):
     """Wrap a coroutine and record wall + CPU time into *timings*."""
     t0_wall = time.perf_counter()
-    t0_cpu  = time.process_time()
-    result  = await coro
-    timings.append(CheckTiming(
-        name=name,
-        wall_ms=round((time.perf_counter() - t0_wall) * 1000, 1),
-        cpu_ms =round((time.process_time()  - t0_cpu)  * 1000, 1),
-    ))
+    t0_cpu = time.process_time()
+    result = await coro
+    timings.append(
+        CheckTiming(
+            name=name,
+            wall_ms=round((time.perf_counter() - t0_wall) * 1000, 1),
+            cpu_ms=round((time.process_time() - t0_cpu) * 1000, 1),
+        )
+    )
     return result
 
 
@@ -61,7 +63,7 @@ async def check_camera(
         plugins = []
 
     t0_wall = time.perf_counter()
-    t0_cpu  = time.process_time()
+    t0_cpu = time.process_time()
     _log.info("camera.start", extra={"camera": camera.name, "ip": camera.ip})
 
     timings: list[CheckTiming] = []
@@ -71,7 +73,8 @@ async def check_camera(
 
         ping = (
             await _timed("ping", check_ping(camera.ip, settings, executor), timings)
-            if _effective(camera.check_ping, settings.check_ping_enabled) else None
+            if _effective(camera.check_ping, settings.check_ping_enabled)
+            else None
         )
 
         main_stream = None
@@ -85,47 +88,74 @@ async def check_camera(
         # Run remaining checks when ping is disabled (unknown) or succeeded
         run_checks = (ping is None) or ping.ok
         if run_checks:
-            do_rtsp     = _effective(camera.check_rtsp,     settings.check_rtsp_enabled)
+            do_rtsp = _effective(camera.check_rtsp, settings.check_rtsp_enabled)
             do_snapshot = _effective(camera.check_snapshot, settings.check_snapshot_enabled)
-            do_ports    = _effective(camera.check_ports,    settings.check_ports_enabled)
-            do_onvif    = _effective(camera.check_onvif,    settings.check_onvif_enabled)
-            do_vapix    = _effective(camera.check_vapix,    settings.check_vapix_enabled)
+            do_ports = _effective(camera.check_ports, settings.check_ports_enabled)
+            do_onvif = _effective(camera.check_onvif, settings.check_onvif_enabled)
+            do_vapix = _effective(camera.check_vapix, settings.check_vapix_enabled)
 
             snmp_impl = camera.check_snmp
             if snmp_impl is None:
                 snmp_impl = "Axis" if settings.check_snmp_enabled else None
 
             main_coro = (
-                _timed("rtsp_main", check_rtsp(camera, camera.rtsp_url_main, settings, executor), timings)
-                if (do_rtsp and camera.rtsp_url_main) else _resolved(None)
+                _timed(
+                    "rtsp_main",
+                    check_rtsp(camera, camera.rtsp_url_main, settings, executor),
+                    timings,
+                )
+                if (do_rtsp and camera.rtsp_url_main)
+                else _resolved(None)
             )
             sub_coro = (
-                _timed("rtsp_sub", check_rtsp(camera, camera.rtsp_url_sub, settings, executor), timings)
-                if (do_rtsp and camera.rtsp_url_sub) else _resolved(None)
+                _timed(
+                    "rtsp_sub", check_rtsp(camera, camera.rtsp_url_sub, settings, executor), timings
+                )
+                if (do_rtsp and camera.rtsp_url_sub)
+                else _resolved(None)
             )
             snap_coro = (
                 _timed("snapshot", check_snapshot(camera, settings, executor), timings)
-                if do_snapshot else _resolved(None)
+                if do_snapshot
+                else _resolved(None)
             )
             port_coro = (
                 _timed("ports", scan_ports(camera.ip, settings), timings)
-                if do_ports else _resolved([])
+                if do_ports
+                else _resolved([])
             )
             onvif_coro = (
                 _timed("onvif", check_onvif(camera, settings, executor), timings)
-                if do_onvif else _resolved(None)
+                if do_onvif
+                else _resolved(None)
             )
             vapix_coro = (
                 _timed("vapix", check_vapix(camera, settings), timings)
-                if do_vapix else _resolved(None)
+                if do_vapix
+                else _resolved(None)
             )
             snmp_coro = (
                 _timed("snmp", check_snmp_axis(camera, settings), timings)
-                if snmp_impl == "Axis" else _resolved(None)
+                if snmp_impl == "Axis"
+                else _resolved(None)
             )
 
-            main_stream, sub_stream, snapshot_base64, port_results, onvif_result, vapix_result, snmp_result = await asyncio.gather(
-                main_coro, sub_coro, snap_coro, port_coro, onvif_coro, vapix_coro, snmp_coro,
+            (
+                main_stream,
+                sub_stream,
+                snapshot_base64,
+                port_results,
+                onvif_result,
+                vapix_result,
+                snmp_result,
+            ) = await asyncio.gather(
+                main_coro,
+                sub_coro,
+                snap_coro,
+                port_coro,
+                onvif_coro,
+                vapix_coro,
+                snmp_coro,
             )
         elif ping is not None and not ping.ok:
             _log.info(
@@ -136,7 +166,7 @@ async def check_camera(
         threads_at_end = threading.active_count()
 
     wall_ms = round((time.perf_counter() - t0_wall) * 1000, 1)
-    cpu_ms  = round((time.process_time()  - t0_cpu)  * 1000, 1)
+    cpu_ms = round((time.process_time() - t0_cpu) * 1000, 1)
 
     telemetry = CameraTelemetry(
         wall_ms=wall_ms,
@@ -149,7 +179,7 @@ async def check_camera(
     result = CameraResult(
         name=camera.name,
         ip=camera.ip,
-        checked_at=datetime.now(timezone.utc),
+        checked_at=datetime.now(UTC),
         ping=ping,
         main_stream=main_stream,
         sub_stream=sub_stream,
@@ -164,16 +194,19 @@ async def check_camera(
 
     if plugins and run_checks:
         plugin_tasks = [
-            asyncio.create_task(_run_plugin(p, camera, result, executor, settings))
-            for p in plugins
+            asyncio.create_task(_run_plugin(p, camera, result, executor, settings)) for p in plugins
         ]
         plugin_outputs = await asyncio.gather(*plugin_tasks, return_exceptions=True)
         for plugin, output in zip(plugins, plugin_outputs):
             if isinstance(output, Exception):
                 _log.error(
                     "plugin.exception",
-                    extra={"camera": camera.name, "ip": camera.ip,
-                           "plugin": plugin.name, "error": str(output)},
+                    extra={
+                        "camera": camera.name,
+                        "ip": camera.ip,
+                        "plugin": plugin.name,
+                        "error": str(output),
+                    },
                     exc_info=output,
                 )
                 result.plugin_results[plugin.name] = {"error": str(output)}
@@ -203,7 +236,9 @@ async def _run_plugin(
     executor: ThreadPoolExecutor,
     settings: Settings,
 ) -> dict:
-    _log.debug("plugin.start", extra={"camera": camera.name, "ip": camera.ip, "plugin": plugin.name})
+    _log.debug(
+        "plugin.start", extra={"camera": camera.name, "ip": camera.ip, "plugin": plugin.name}
+    )
     return await plugin.run(camera, result, executor, settings)
 
 
@@ -211,7 +246,7 @@ async def check_cameras(
     cameras: list[CameraConfig],
     settings: Settings | None = None,
     plugins: list[AbstractPlugin] | None = None,
-) -> AsyncGenerator[CameraResult, None]:
+) -> AsyncGenerator[CameraResult]:
     if settings is None:
         settings = Settings()
 
@@ -235,10 +270,13 @@ async def check_cameras(
                 result = CameraResult(
                     name=camera.name,
                     ip=camera.ip,
-                    checked_at=datetime.now(timezone.utc),
+                    checked_at=datetime.now(UTC),
                     ping=PingResult(
-                        ok=False, latency_ms=None, jitter_ms=None,
-                        packet_loss_percent=None, error=str(exc),
+                        ok=False,
+                        latency_ms=None,
+                        jitter_ms=None,
+                        packet_loss_percent=None,
+                        error=str(exc),
                     ),
                     main_stream=None,
                     sub_stream=None,

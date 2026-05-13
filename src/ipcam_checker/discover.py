@@ -1,4 +1,5 @@
 """Camera discovery: mDNS (Bonjour) + TCP port scan."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,8 +8,8 @@ import ipaddress
 import socket
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable
 
 from ipcam_checker._logging import get_logger
 from ipcam_checker.models import DiscoveredDevice, MdnsService
@@ -27,6 +28,7 @@ DEFAULT_MDNS_TYPES: list[str] = [
 
 
 # ── Port scan ──────────────────────────────────────────────────────────────────
+
 
 def _tcp_open(ip: str, port: int, timeout: float) -> bool:
     try:
@@ -75,6 +77,7 @@ def _scan_subnet(
 
 # ── mDNS browse ───────────────────────────────────────────────────────────────
 
+
 def _mdns_browse(
     service_types: list[str],
     timeout_s: float,
@@ -93,7 +96,7 @@ def _mdns_browse(
     lock = threading.Lock()
 
     class _Handler:
-        def add_service(self, zc: "Zeroconf", type_: str, name: str) -> None:
+        def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             info = zc.get_service_info(type_, name, timeout=2000)
             if not info:
                 return
@@ -103,7 +106,8 @@ def _mdns_browse(
             except AttributeError:
                 addrs = [socket.inet_ntoa(a) for a in info.addresses]
             addrs = [
-                a for a in addrs
+                a
+                for a in addrs
                 if not ipaddress.ip_address(a).is_link_local
                 and not ipaddress.ip_address(a).is_loopback
             ]
@@ -134,10 +138,10 @@ def _mdns_browse(
                 for ip in addrs:
                     collected.setdefault(ip, []).append(svc)
 
-        def remove_service(self, zc: "Zeroconf", type_: str, name: str) -> None:
+        def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             pass
 
-        def update_service(self, zc: "Zeroconf", type_: str, name: str) -> None:
+        def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             self.add_service(zc, type_, name)
 
     _log.info(
@@ -157,6 +161,7 @@ def _mdns_browse(
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
+
 
 async def discover_cameras(
     network: str,
@@ -182,13 +187,18 @@ async def discover_cameras(
     Returns:
         List of DiscoveredDevice sorted by IP, mDNS-only and port-scan-only merged.
     """
-    ports      = scan_ports        or DEFAULT_PORTS
-    svc_types  = mdns_service_types or DEFAULT_MDNS_TYPES
+    ports = scan_ports or DEFAULT_PORTS
+    svc_types = mdns_service_types or DEFAULT_MDNS_TYPES
 
     loop = asyncio.get_running_loop()
 
     scan_fn = functools.partial(
-        _scan_subnet, network, ports, port_timeout_s, port_scan_workers, on_port_found,
+        _scan_subnet,
+        network,
+        ports,
+        port_timeout_s,
+        port_scan_workers,
+        on_port_found,
     )
     mdns_fn = functools.partial(_mdns_browse, svc_types, mdns_timeout_s)
 

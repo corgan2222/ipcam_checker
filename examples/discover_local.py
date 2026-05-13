@@ -1,6 +1,6 @@
 """Discover cameras on a local subnet via mDNS (Bonjour) + TCP port scan."""
+
 import asyncio
-import threading
 from pathlib import Path
 
 from ipcam_checker import setup_logging
@@ -8,9 +8,9 @@ from ipcam_checker.discover import discover_cameras
 
 NETWORK = "192.168.2.0/24"
 
-MDNS_TIMEOUT_S   = 5.0    # how long to listen for mDNS announcements
-PORT_TIMEOUT_S   = 0.5    # per-connection TCP timeout
-PORT_SCAN_WORKERS = 150   # concurrent TCP threads (150 handles /24 quickly)
+MDNS_TIMEOUT_S = 5.0  # how long to listen for mDNS announcements
+PORT_TIMEOUT_S = 0.5  # per-connection TCP timeout
+PORT_SCAN_WORKERS = 150  # concurrent TCP threads (150 handles /24 quickly)
 
 
 def _on_port_found(ip: str, port: int) -> None:
@@ -35,11 +35,11 @@ async def main() -> None:
     )
 
     cameras = [d for d in devices if d.likely_camera]
-    others  = [d for d in devices if not d.likely_camera]
+    others = [d for d in devices if not d.likely_camera]
 
-    print(f"\n{'='*56}")
+    print(f"\n{'=' * 56}")
     print(f"  Found {len(devices)} active host(s)  —  {len(cameras)} likely camera(s)")
-    print(f"{'='*56}\n")
+    print(f"{'=' * 56}\n")
 
     # ── Likely cameras ────────────────────────────────────────────────────────
     if cameras:
@@ -63,12 +63,12 @@ async def main() -> None:
         print("------------------")
         for d in others:
             ports_str = "  ".join(str(p) for p in d.open_ports) or "—"
-            mdns_str  = "  ".join(s.service_type for s in d.mdns_services)
-            extra     = f"  [{mdns_str}]" if mdns_str else ""
+            mdns_str = "  ".join(s.service_type for s in d.mdns_services)
+            extra = f"  [{mdns_str}]" if mdns_str else ""
             print(f"  {d.ip}  ports: {ports_str}{extra}")
         print()
 
-    print(f"Log written to: logs/discover.log")
+    print("Log written to: logs/discover.log")
 
 
 if __name__ == "__main__":

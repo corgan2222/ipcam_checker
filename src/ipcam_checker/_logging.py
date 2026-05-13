@@ -11,6 +11,7 @@ _ROOT = "ipcam_checker"
 
 try:
     from pythonjsonlogger import jsonlogger as _jl
+
     _HAS_JSON = True
 except ImportError:
     _HAS_JSON = False
@@ -66,15 +67,17 @@ def _add_file(logger: logging.Logger, path: Path, as_json: bool) -> None:
         path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
     )
     if as_json and _HAS_JSON:
-        h.setFormatter(_jl.JsonFormatter(
-            "%(asctime)s %(name)s %(levelname)s %(message)s",
-            datefmt=_DATE_FMT,
-            rename_fields={
-                "asctime": "timestamp",
-                "levelname": "level",
-                "name": "logger",
-            },
-        ))
+        h.setFormatter(
+            _jl.JsonFormatter(
+                "%(asctime)s %(name)s %(levelname)s %(message)s",
+                datefmt=_DATE_FMT,
+                rename_fields={
+                    "asctime": "timestamp",
+                    "levelname": "level",
+                    "name": "logger",
+                },
+            )
+        )
     else:
         h.setFormatter(logging.Formatter(_TEXT_FMT, datefmt=_DATE_FMT))
     logger.addHandler(h)
@@ -83,6 +86,7 @@ def _add_file(logger: logging.Logger, path: Path, as_json: bool) -> None:
 def _add_loki(logger: logging.Logger, url: str, labels: dict[str, str]) -> None:
     try:
         import logging_loki  # type: ignore[import]
+
         h = logging_loki.LokiHandler(
             url=url,
             tags={"application": "ipcam-checker", **labels},

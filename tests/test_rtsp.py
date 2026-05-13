@@ -4,28 +4,28 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from ipcam_checker.checks.check_rtsp import check_rtsp
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig
 
-
-FFPROBE_OUTPUT_OK = json.dumps({
-    "streams": [
-        {
-            "codec_type": "video",
-            "codec_name": "h264",
-            "width": 1920,
-            "height": 1080,
-            "r_frame_rate": "25/1",
-            "bit_rate": "2097152",
-        },
-        {
-            "codec_type": "audio",
-            "codec_name": "aac",
-        }
-    ]
-})
+FFPROBE_OUTPUT_OK = json.dumps(
+    {
+        "streams": [
+            {
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 1920,
+                "height": 1080,
+                "r_frame_rate": "25/1",
+                "bit_rate": "2097152",
+            },
+            {
+                "codec_type": "audio",
+                "codec_name": "aac",
+            },
+        ]
+    }
+)
 
 FFPROBE_OUTPUT_NO_VIDEO = json.dumps({"streams": [{"codec_type": "audio"}]})
 
@@ -50,8 +50,10 @@ async def test_rtsp_ok(camera):
     mock_proc.returncode = 0
     mock_proc.stdout = FFPROBE_OUTPUT_OK
     mock_proc.stderr = ""
-    with patch("subprocess.run", return_value=mock_proc), \
-         patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")):
+    with (
+        patch("subprocess.run", return_value=mock_proc),
+        patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")),
+    ):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_rtsp(camera, "/stream1", settings, executor)
     assert result.ok is True
@@ -70,8 +72,10 @@ async def test_rtsp_no_video_stream(camera):
     mock_proc.returncode = 0
     mock_proc.stdout = FFPROBE_OUTPUT_NO_VIDEO
     mock_proc.stderr = ""
-    with patch("subprocess.run", return_value=mock_proc), \
-         patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")):
+    with (
+        patch("subprocess.run", return_value=mock_proc),
+        patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")),
+    ):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_rtsp(camera, "/stream1", settings, executor)
     assert result.ok is False
@@ -81,8 +85,10 @@ async def test_rtsp_no_video_stream(camera):
 @pytest.mark.asyncio
 async def test_rtsp_connection_failed(camera):
     settings = Settings()
-    with patch("subprocess.run", side_effect=OSError("connection refused")), \
-         patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")):
+    with (
+        patch("subprocess.run", side_effect=OSError("connection refused")),
+        patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")),
+    ):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_rtsp(camera, "/stream1", settings, executor)
     assert result.ok is False
@@ -92,14 +98,28 @@ async def test_rtsp_connection_failed(camera):
 @pytest.mark.asyncio
 async def test_rtsp_fractional_fps(camera):
     settings = Settings()
-    output = json.dumps({"streams": [{"codec_type": "video", "codec_name": "h264",
-        "width": 1280, "height": 720, "r_frame_rate": "30000/1001", "bit_rate": "1000000"}]})
+    output = json.dumps(
+        {
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": "h264",
+                    "width": 1280,
+                    "height": 720,
+                    "r_frame_rate": "30000/1001",
+                    "bit_rate": "1000000",
+                }
+            ]
+        }
+    )
     mock_proc = MagicMock()
     mock_proc.returncode = 0
     mock_proc.stdout = output
     mock_proc.stderr = ""
-    with patch("subprocess.run", return_value=mock_proc), \
-         patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")):
+    with (
+        patch("subprocess.run", return_value=mock_proc),
+        patch("ipcam_checker.checks.check_rtsp._get_ffprobe_path", return_value=Path("ffprobe")),
+    ):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_rtsp(camera, "/stream1", settings, executor)
     assert result.fps == pytest.approx(29.97, rel=0.01)

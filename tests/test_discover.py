@@ -1,16 +1,16 @@
 """Tests for ipcam_checker.discover — port scan + mDNS discovery."""
+
 from __future__ import annotations
 
 import ipaddress
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-
 from ipcam_checker.discover import _scan_subnet, _tcp_open, discover_cameras
 from ipcam_checker.models import DiscoveredDevice, MdnsService
 
-
 # ── _tcp_open ─────────────────────────────────────────────────────────────────
+
 
 def test_tcp_open_success():
     with patch("socket.create_connection"):
@@ -23,6 +23,7 @@ def test_tcp_open_failure():
 
 
 # ── _scan_subnet ──────────────────────────────────────────────────────────────
+
 
 def test_scan_subnet_finds_open_ports():
     def fake_tcp(ip, port, timeout):
@@ -57,14 +58,17 @@ def test_scan_subnet_empty_network():
 
 # ── discover_cameras (async) ──────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_discover_cameras_merges_port_and_mdns():
     port_results = {"192.168.1.10": [554, 80]}
     mdns_svc = MdnsService(service_type="_axis-video._tcp", name="AXIS-cam", port=80)
     mdns_results = {"192.168.1.20": [mdns_svc]}
 
-    with patch("ipcam_checker.discover._scan_subnet", return_value=port_results), \
-         patch("ipcam_checker.discover._mdns_browse", return_value=mdns_results):
+    with (
+        patch("ipcam_checker.discover._scan_subnet", return_value=port_results),
+        patch("ipcam_checker.discover._mdns_browse", return_value=mdns_results),
+    ):
         devices = await discover_cameras("192.168.1.0/24")
 
     ips = [d.ip for d in devices]
@@ -79,8 +83,10 @@ async def test_discover_cameras_sorted_by_ip():
         "192.168.1.10": [554],
         "192.168.1.20": [443],
     }
-    with patch("ipcam_checker.discover._scan_subnet", return_value=port_results), \
-         patch("ipcam_checker.discover._mdns_browse", return_value={}):
+    with (
+        patch("ipcam_checker.discover._scan_subnet", return_value=port_results),
+        patch("ipcam_checker.discover._mdns_browse", return_value={}),
+    ):
         devices = await discover_cameras("192.168.1.0/24")
 
     ips = [d.ip for d in devices]
@@ -90,8 +96,10 @@ async def test_discover_cameras_sorted_by_ip():
 @pytest.mark.asyncio
 async def test_discover_cameras_returns_discovered_device_objects():
     port_results = {"192.168.1.5": [554]}
-    with patch("ipcam_checker.discover._scan_subnet", return_value=port_results), \
-         patch("ipcam_checker.discover._mdns_browse", return_value={}):
+    with (
+        patch("ipcam_checker.discover._scan_subnet", return_value=port_results),
+        patch("ipcam_checker.discover._mdns_browse", return_value={}),
+    ):
         devices = await discover_cameras("192.168.1.0/24")
 
     assert len(devices) == 1
@@ -102,8 +110,10 @@ async def test_discover_cameras_returns_discovered_device_objects():
 
 @pytest.mark.asyncio
 async def test_discover_cameras_empty_network():
-    with patch("ipcam_checker.discover._scan_subnet", return_value={}), \
-         patch("ipcam_checker.discover._mdns_browse", return_value={}):
+    with (
+        patch("ipcam_checker.discover._scan_subnet", return_value={}),
+        patch("ipcam_checker.discover._mdns_browse", return_value={}),
+    ):
         devices = await discover_cameras("192.168.1.0/24")
 
     assert devices == []
@@ -118,9 +128,11 @@ async def test_discover_cameras_on_port_found_callback():
             on_found("192.168.1.10", 554)
         return {"192.168.1.10": [554]}
 
-    with patch("ipcam_checker.discover._scan_subnet", side_effect=fake_scan), \
-         patch("ipcam_checker.discover._mdns_browse", return_value={}):
-        devices = await discover_cameras(
+    with (
+        patch("ipcam_checker.discover._scan_subnet", side_effect=fake_scan),
+        patch("ipcam_checker.discover._mdns_browse", return_value={}),
+    ):
+        await discover_cameras(
             "192.168.1.0/24",
             on_port_found=lambda ip, p: called.append((ip, p)),
         )
@@ -135,8 +147,10 @@ async def test_discover_cameras_mdns_merged_with_ports():
     port_results = {"192.168.1.10": [554, 80]}
     mdns_results = {"192.168.1.10": [svc]}
 
-    with patch("ipcam_checker.discover._scan_subnet", return_value=port_results), \
-         patch("ipcam_checker.discover._mdns_browse", return_value=mdns_results):
+    with (
+        patch("ipcam_checker.discover._scan_subnet", return_value=port_results),
+        patch("ipcam_checker.discover._mdns_browse", return_value=mdns_results),
+    ):
         devices = await discover_cameras("192.168.1.0/24")
 
     assert len(devices) == 1

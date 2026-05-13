@@ -42,7 +42,9 @@ def _encode_image(raw: bytes, settings: Settings) -> str:
 
 
 def _fetch_http(camera: CameraConfig, settings: Settings) -> str | None:
-    _log.debug("snapshot.start", extra={"camera": camera.name, "ip": camera.ip, "url": camera.snapshot_url})
+    _log.debug(
+        "snapshot.start", extra={"camera": camera.name, "ip": camera.ip, "url": camera.snapshot_url}
+    )
     try:
         auth = (camera.rtsp_username, camera.rtsp_password) if camera.rtsp_username else None
         with httpx.Client(timeout=settings.snapshot_timeout_s) as client:
@@ -52,23 +54,40 @@ def _fetch_http(camera: CameraConfig, settings: Settings) -> str | None:
         _log.info(
             "snapshot.ok",
             extra={
-                "camera": camera.name, "ip": camera.ip,
+                "camera": camera.name,
+                "ip": camera.ip,
                 "source": "http",
                 "size_bytes": len(response.content),
             },
         )
         return encoded
     except httpx.TimeoutException:
-        _log.warning("snapshot.timeout", extra={"camera": camera.name, "ip": camera.ip,
-                                                 "timeout_s": settings.snapshot_timeout_s})
+        _log.warning(
+            "snapshot.timeout",
+            extra={
+                "camera": camera.name,
+                "ip": camera.ip,
+                "timeout_s": settings.snapshot_timeout_s,
+            },
+        )
         return None
     except httpx.HTTPStatusError as exc:
-        _log.warning("snapshot.http_error", extra={"camera": camera.name, "ip": camera.ip,
-                                                    "status_code": exc.response.status_code, "error": str(exc)})
+        _log.warning(
+            "snapshot.http_error",
+            extra={
+                "camera": camera.name,
+                "ip": camera.ip,
+                "status_code": exc.response.status_code,
+                "error": str(exc),
+            },
+        )
         return None
     except Exception as exc:
-        _log.error("snapshot.exception", extra={"camera": camera.name, "ip": camera.ip, "error": str(exc)},
-                   exc_info=True)
+        _log.error(
+            "snapshot.exception",
+            extra={"camera": camera.name, "ip": camera.ip, "error": str(exc)},
+            exc_info=True,
+        )
         return None
 
 
@@ -80,14 +99,22 @@ def _fetch_rtsp_frame(camera: CameraConfig, rtsp_url: str, settings: Settings) -
         timeout_us = int(settings.snapshot_timeout_s * 1_000_000)
         cmd = [
             str(ffmpeg),
-            "-rtsp_transport", "tcp",
-            "-timeout", str(timeout_us),
-            "-i", url,
-            "-frames:v", "1",
-            "-vf", f"scale={settings.snapshot_width}:{settings.snapshot_height}",
-            "-f", "image2",
-            "-vcodec", "mjpeg",
-            "-q:v", "5",
+            "-rtsp_transport",
+            "tcp",
+            "-timeout",
+            str(timeout_us),
+            "-i",
+            url,
+            "-frames:v",
+            "1",
+            "-vf",
+            f"scale={settings.snapshot_width}:{settings.snapshot_height}",
+            "-f",
+            "image2",
+            "-vcodec",
+            "mjpeg",
+            "-q:v",
+            "5",
             "-y",
             "pipe:1",
         ]
@@ -98,21 +125,40 @@ def _fetch_rtsp_frame(camera: CameraConfig, rtsp_url: str, settings: Settings) -
         )
         if proc.returncode != 0 or not proc.stdout:
             err = proc.stderr.decode("utf-8", errors="replace").strip() or "no output"
-            _log.warning("snapshot.rtsp_frame.fail", extra={"camera": camera.name, "ip": camera.ip, "error": err})
+            _log.warning(
+                "snapshot.rtsp_frame.fail",
+                extra={"camera": camera.name, "ip": camera.ip, "error": err},
+            )
             return None
 
         encoded = _encode_image(proc.stdout, settings)
-        _log.info("snapshot.ok", extra={"camera": camera.name, "ip": camera.ip,
-                                        "source": "rtsp_frame", "size_bytes": len(proc.stdout)})
+        _log.info(
+            "snapshot.ok",
+            extra={
+                "camera": camera.name,
+                "ip": camera.ip,
+                "source": "rtsp_frame",
+                "size_bytes": len(proc.stdout),
+            },
+        )
         return encoded
 
     except subprocess.TimeoutExpired:
-        _log.warning("snapshot.timeout", extra={"camera": camera.name, "ip": camera.ip,
-                                                 "timeout_s": settings.snapshot_timeout_s})
+        _log.warning(
+            "snapshot.timeout",
+            extra={
+                "camera": camera.name,
+                "ip": camera.ip,
+                "timeout_s": settings.snapshot_timeout_s,
+            },
+        )
         return None
     except Exception as exc:
-        _log.error("snapshot.exception", extra={"camera": camera.name, "ip": camera.ip, "error": str(exc)},
-                   exc_info=True)
+        _log.error(
+            "snapshot.exception",
+            extra={"camera": camera.name, "ip": camera.ip, "error": str(exc)},
+            exc_info=True,
+        )
         return None
 
 
@@ -133,7 +179,9 @@ async def check_snapshot(
 ) -> str | None:
     has_rtsp = camera.rtsp_url_sub or camera.rtsp_url_main
     if not camera.snapshot_url and not (settings.snapshot_rtsp_fallback and has_rtsp):
-        _log.debug("snapshot.skip", extra={"camera": camera.name, "ip": camera.ip, "reason": "no url"})
+        _log.debug(
+            "snapshot.skip", extra={"camera": camera.name, "ip": camera.ip, "reason": "no url"}
+        )
         return None
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(executor, _fetch_and_encode, camera, settings)

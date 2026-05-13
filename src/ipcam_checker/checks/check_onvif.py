@@ -12,6 +12,7 @@ _log = get_logger("onvif")
 
 def _port_reachable(ip: str, port: int, timeout: float) -> bool:
     import socket
+
     try:
         with socket.create_connection((ip, port), timeout=timeout):
             return True
@@ -23,8 +24,12 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
     if not _port_reachable(camera.ip, camera.onvif_port, settings.onvif_timeout_s):
         _log.debug(
             "onvif.skip",
-            extra={"camera": camera.name, "ip": camera.ip, "port": camera.onvif_port,
-                   "reason": "port unreachable"},
+            extra={
+                "camera": camera.name,
+                "ip": camera.ip,
+                "port": camera.onvif_port,
+                "reason": "port unreachable",
+            },
         )
         return OnvifResult(ok=False, error=f"port {camera.onvif_port} unreachable")
 
@@ -138,7 +143,7 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
                         modules = analytics_svc.GetAnalyticsModules(
                             {"ConfigurationToken": va_token}
                         )
-                        for m in (modules or []):
+                        for m in modules or []:
                             name = getattr(m, "Name", None) or ""
                             if name and name not in seen:
                                 seen.add(name)
@@ -146,7 +151,9 @@ def _run_onvif(camera: CameraConfig, settings: Settings) -> OnvifResult:
                     except Exception:
                         pass
             except Exception as exc:
-                _log.debug("onvif.analytics_error", extra={"camera": camera.name, "error": str(exc)})
+                _log.debug(
+                    "onvif.analytics_error", extra={"camera": camera.name, "error": str(exc)}
+                )
 
         _log.info(
             "onvif.ok",

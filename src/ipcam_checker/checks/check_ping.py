@@ -31,9 +31,9 @@ async def check_ping(ip: str, settings: Settings, executor: ThreadPoolExecutor) 
             latency_ms=latency_ms,
             jitter_ms=jitter_ms,
             packet_loss_percent=packet_loss,
-            error=None if ok else (
-                f"packet loss: {packet_loss}%" if packet_loss < 100.0 else "host unreachable"
-            ),
+            error=None
+            if ok
+            else (f"packet loss: {packet_loss}%" if packet_loss < 100.0 else "host unreachable"),
         )
 
         if ok:
@@ -62,6 +62,9 @@ async def check_ping(ip: str, settings: Settings, executor: ThreadPoolExecutor) 
     except Exception as exc:
         _log.error("ping.exception", extra={"ip": ip, "error": str(exc)}, exc_info=True)
         return PingResult(
-            ok=False, latency_ms=None, jitter_ms=None,
-            packet_loss_percent=None, error=str(exc),
+            ok=False,
+            latency_ms=None,
+            jitter_ms=None,
+            packet_loss_percent=None,
+            error=str(exc),
         )

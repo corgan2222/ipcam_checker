@@ -71,7 +71,10 @@ async def check_vapix(camera: CameraConfig, settings: Settings) -> VapixResult:
         if resp.status_code == 401:
             return VapixResult(ok=False, error="authentication failed (401)")
         if resp.status_code == 404:
-            return VapixResult(ok=False, error="temperaturecontrol.cgi not found (404) — not supported by this camera")
+            return VapixResult(
+                ok=False,
+                error="temperaturecontrol.cgi not found (404) — not supported by this camera",
+            )
         if resp.status_code != 200:
             return VapixResult(ok=False, error=f"HTTP {resp.status_code}")
 
@@ -92,5 +95,7 @@ async def check_vapix(camera: CameraConfig, settings: Settings) -> VapixResult:
     except httpx.TimeoutException:
         return VapixResult(ok=False, error="timeout")
     except Exception as exc:
-        _log.warning("vapix.fail", extra={"camera": camera.name, "ip": camera.ip, "error": str(exc)})
+        _log.warning(
+            "vapix.fail", extra={"camera": camera.name, "ip": camera.ip, "error": str(exc)}
+        )
         return VapixResult(ok=False, error=str(exc))

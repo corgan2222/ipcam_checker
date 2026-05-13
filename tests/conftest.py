@@ -4,12 +4,14 @@ import pytest
 @pytest.fixture
 def settings():
     from ipcam_checker.config import Settings
+
     return Settings()
 
 
 @pytest.fixture
 def camera():
     from ipcam_checker.models import CameraConfig
+
     return CameraConfig(
         name="Test Cam",
         ip="192.168.1.100",

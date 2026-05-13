@@ -100,7 +100,7 @@ class VapixResult(BaseModel):
 class SnmpTempSensor(BaseModel):
     sensor_type: str | None = None  # "common", "housing", "rack", "cpu"
     sensor_id: int
-    status: str | None = None       # "ok", "failure", "outOfBoundary"
+    status: str | None = None  # "ok", "failure", "outOfBoundary"
     celsius: int | None = None
 
 
@@ -112,22 +112,22 @@ class SnmpVideoChannel(BaseModel):
 class SnmpStorageEntry(BaseModel):
     index: int
     descr: str | None = None
-    storage_type: str | None = None   # "ram", "virtualMemory", "fixedDisk", "flashMemory", …
+    storage_type: str | None = None  # "ram", "virtualMemory", "fixedDisk", "flashMemory", …
     total_mb: float | None = None
     used_mb: float | None = None
 
 
 class SnmpInterface(BaseModel):
     index: int
-    name: str | None = None           # ifDescr (e.g. "eth0")
-    speed_mbps: int | None = None     # ifSpeed / 1_000_000
-    admin_status: str | None = None   # "up" / "down"
+    name: str | None = None  # ifDescr (e.g. "eth0")
+    speed_mbps: int | None = None  # ifSpeed / 1_000_000
+    admin_status: str | None = None  # "up" / "down"
     oper_status: str | None = None
-    rx_bytes: int | None = None       # ifInOctets
-    tx_bytes: int | None = None       # ifOutOctets
-    rx_errors: int | None = None      # ifInErrors
-    tx_errors: int | None = None      # ifOutErrors
-    rx_discards: int | None = None    # ifInDiscards
+    rx_bytes: int | None = None  # ifInOctets
+    tx_bytes: int | None = None  # ifOutOctets
+    rx_errors: int | None = None  # ifInErrors
+    tx_errors: int | None = None  # ifOutErrors
+    rx_discards: int | None = None  # ifInDiscards
 
 
 class SnmpResult(BaseModel):
@@ -137,7 +137,7 @@ class SnmpResult(BaseModel):
     uptime_s: int | None = None
     temp_sensors: list[SnmpTempSensor] = Field(default_factory=list)
     video_channels: list[SnmpVideoChannel] = Field(default_factory=list)
-    cpu_loads: list[int] = Field(default_factory=list)      # per-CPU load % (0-100)
+    cpu_loads: list[int] = Field(default_factory=list)  # per-CPU load % (0-100)
     storage: list[SnmpStorageEntry] = Field(default_factory=list)
     interfaces: list[SnmpInterface] = Field(default_factory=list)
     error: str | None = None
@@ -169,10 +169,10 @@ class OnvifResult(BaseModel):
 
 
 class MdnsService(BaseModel):
-    service_type: str           # e.g. "_axis-video._tcp"
-    name: str                   # e.g. "AXIS P1435-LE - ACCC8E123456._axis-video._tcp.local."
+    service_type: str  # e.g. "_axis-video._tcp"
+    name: str  # e.g. "AXIS P1435-LE - ACCC8E123456._axis-video._tcp.local."
     port: int
-    txt: dict[str, str] = Field(default_factory=dict)   # TXT record key/value pairs
+    txt: dict[str, str] = Field(default_factory=dict)  # TXT record key/value pairs
 
 
 class DiscoveredDevice(BaseModel):
@@ -195,7 +195,7 @@ class DiscoveredDevice(BaseModel):
 
 
 class CheckTiming(BaseModel):
-    name: str           # "ping", "rtsp_main", "rtsp_sub", "snapshot", "ports", "onvif", "vapix", "snmp"
+    name: str  # "ping", "rtsp_main", "rtsp_sub", "snapshot", "ports", "onvif", "vapix", "snmp"
     wall_ms: float
     # process_time() delta — accurate for blocking (ThreadPoolExecutor) checks;
     # approximate for pure-async checks because other coroutines run concurrently.
@@ -206,8 +206,8 @@ class CameraTelemetry(BaseModel):
     wall_ms: float
     cpu_ms: float | None = None
     checks: list[CheckTiming] = Field(default_factory=list)
-    threads_at_start: int | None = None   # threading.active_count() before checks
-    threads_at_end: int | None = None     # threading.active_count() after checks
+    threads_at_start: int | None = None  # threading.active_count() before checks
+    threads_at_end: int | None = None  # threading.active_count() after checks
 
 
 class CameraResult(BaseModel):

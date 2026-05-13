@@ -1,4 +1,5 @@
 """Example: check a single IP camera."""
+
 import asyncio
 import json
 

@@ -3,10 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-
-import threading
 
 from ipcam_checker._ffmpeg import ensure_ffmpeg
 from ipcam_checker._logging import get_logger
@@ -44,6 +43,7 @@ def _safe_stream_label(camera: CameraConfig, stream_path: str) -> str:
     if stream_path.startswith("rtsp://"):
         # mask user:pass@ if present
         import re
+
         return re.sub(r"rtsp://[^@]+@", "rtsp://<auth>@", stream_path)
     return f"{camera.ip}:{camera.rtsp_port}{stream_path}"
 
@@ -59,10 +59,7 @@ def _parse_fps(rate: str) -> float | None:
 
 def _best_fps(video: dict) -> float | None:
     # avg_frame_rate is the actual playback rate; r_frame_rate is tbr (often higher)
-    return (
-        _parse_fps(video.get("avg_frame_rate", ""))
-        or _parse_fps(video.get("r_frame_rate", ""))
-    )
+    return _parse_fps(video.get("avg_frame_rate", "")) or _parse_fps(video.get("r_frame_rate", ""))
 
 
 def _compute_bitrate_kbps(data: dict) -> float | None:
@@ -85,13 +82,11 @@ def _compute_bitrate_kbps(data: dict) -> float | None:
     try:
         total_bits = sum(int(p.get("size", 0)) * 8 for p in packets)
         times = [
-            float(p["dts_time"]) for p in packets
-            if p.get("dts_time") not in ("N/A", None, "")
+            float(p["dts_time"]) for p in packets if p.get("dts_time") not in ("N/A", None, "")
         ]
         if len(times) < 2:
             times = [
-                float(p["pts_time"]) for p in packets
-                if p.get("pts_time") not in ("N/A", None, "")
+                float(p["pts_time"]) for p in packets if p.get("pts_time") not in ("N/A", None, "")
             ]
         if len(times) >= 2:
             duration = times[-1] - times[0]
@@ -166,16 +161,23 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
         read_interval = f"%+{settings.ffprobe_analyze_duration_s:.0f}"
         cmd = [
             str(ffprobe),
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_streams",
             "-show_format",
             "-show_packets",
-            "-select_streams", "v:0",
-            "-read_intervals", read_interval,
-            "-analyzeduration", str(analyze_us),
-            "-probesize", "5000000",
-            "-timeout", str(timeout_us),
+            "-select_streams",
+            "v:0",
+            "-read_intervals",
+            read_interval,
+            "-analyzeduration",
+            str(analyze_us),
+            "-probesize",
+            "5000000",
+            "-timeout",
+            str(timeout_us),
             url,
         ]
         proc = subprocess.run(
@@ -194,8 +196,13 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
                 extra={"camera": camera.name, "ip": camera.ip, "stream": label, "error": err},
             )
             return StreamResult(
-                ok=False, width=None, height=None, fps=None,
-                codec=None, bitrate_kbps=None, error=err,
+                ok=False,
+                width=None,
+                height=None,
+                fps=None,
+                codec=None,
+                bitrate_kbps=None,
+                error=err,
             )
 
         data = json.loads(proc.stdout)
@@ -209,8 +216,13 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
                 extra={"camera": camera.name, "ip": camera.ip, "stream": label},
             )
             return StreamResult(
-                ok=False, width=None, height=None, fps=None,
-                codec=None, bitrate_kbps=None, error="no video stream found",
+                ok=False,
+                width=None,
+                height=None,
+                fps=None,
+                codec=None,
+                bitrate_kbps=None,
+                error="no video stream found",
             )
 
         fps = _best_fps(video)
@@ -252,10 +264,19 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             },
         )
         return StreamResult(
-            ok=True, width=width, height=height, fps=fps,
-            codec=codec, profile=profile, pix_fmt=pix_fmt, level=level,
-            audio_codec=audio_codec, bitrate_kbps=bitrate_kbps,
-            title=title, comment=comment, probe_score=probe_score,
+            ok=True,
+            width=width,
+            height=height,
+            fps=fps,
+            codec=codec,
+            profile=profile,
+            pix_fmt=pix_fmt,
+            level=level,
+            audio_codec=audio_codec,
+            bitrate_kbps=bitrate_kbps,
+            title=title,
+            comment=comment,
+            probe_score=probe_score,
             packets_received=rtp["packets_received"],
             packets_lost=rtp["packets_lost"],
             loss_percent=rtp["loss_percent"],
@@ -268,12 +289,20 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
     except subprocess.TimeoutExpired:
         _log.warning(
             "rtsp.timeout",
-            extra={"camera": camera.name, "ip": camera.ip, "stream": label,
-                   "timeout_s": settings.rtsp_timeout_s},
+            extra={
+                "camera": camera.name,
+                "ip": camera.ip,
+                "stream": label,
+                "timeout_s": settings.rtsp_timeout_s,
+            },
         )
         return StreamResult(
-            ok=False, width=None, height=None, fps=None,
-            codec=None, bitrate_kbps=None,
+            ok=False,
+            width=None,
+            height=None,
+            fps=None,
+            codec=None,
+            bitrate_kbps=None,
             error=f"ffprobe timeout after {settings.rtsp_timeout_s}s",
         )
     except Exception as exc:
@@ -283,8 +312,13 @@ def _run_ffprobe(camera: CameraConfig, stream_path: str, settings: Settings) -> 
             exc_info=True,
         )
         return StreamResult(
-            ok=False, width=None, height=None, fps=None,
-            codec=None, bitrate_kbps=None, error=str(exc),
+            ok=False,
+            width=None,
+            height=None,
+            fps=None,
+            codec=None,
+            bitrate_kbps=None,
+            error=str(exc),
         )
 
 

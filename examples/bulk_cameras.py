@@ -1,4 +1,5 @@
 """Example: check multiple IP cameras, streaming results."""
+
 import asyncio
 import json
 

@@ -2,7 +2,6 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from ipcam_checker.checks.check_ping import check_ping
 from ipcam_checker.config import Settings
 
@@ -58,7 +57,10 @@ async def test_ping_fail():
 @pytest.mark.asyncio
 async def test_ping_exception():
     settings = Settings()
-    with patch("ipcam_checker.checks.check_ping.async_ping", new=AsyncMock(side_effect=OSError("socket error"))):
+    with patch(
+        "ipcam_checker.checks.check_ping.async_ping",
+        new=AsyncMock(side_effect=OSError("socket error")),
+    ):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_ping("192.168.1.1", settings, executor)
     assert result.ok is False

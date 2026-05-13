@@ -2,14 +2,13 @@ import base64
 import io
 from concurrent.futures import ThreadPoolExecutor
 
+import httpx
 import pytest
 import respx
-import httpx
-from PIL import Image
-
 from ipcam_checker.checks.check_snapshot import check_snapshot
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig
+from PIL import Image
 
 
 def _make_jpeg_bytes(width: int = 1920, height: int = 1080) -> bytes:
@@ -69,9 +68,7 @@ async def test_snapshot_no_url(camera_no_snapshot):
 @pytest.mark.asyncio
 @respx.mock
 async def test_snapshot_http_error(camera_with_snapshot):
-    respx.get("http://192.168.1.100/snapshot.jpg").mock(
-        return_value=httpx.Response(401)
-    )
+    respx.get("http://192.168.1.100/snapshot.jpg").mock(return_value=httpx.Response(401))
     settings = Settings()
     with ThreadPoolExecutor(max_workers=2) as executor:
         result = await check_snapshot(camera_with_snapshot, settings, executor)

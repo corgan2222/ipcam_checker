@@ -119,9 +119,9 @@ SETTINGS = Settings(
 def _fmt(result) -> str:
     ping = result.ping
     lines = [
-        f"\n{'='*50}",
+        f"\n{'=' * 50}",
         f"  {result.name}  ({result.ip})",
-        f"{'='*50}",
+        f"{'=' * 50}",
     ]
     if ping is None:
         lines.append("  ping:    disabled")
@@ -263,8 +263,8 @@ def _fmt(result) -> str:
         if snmp.interfaces:
             for iface in snmp.interfaces:
                 spd = f"  {iface.speed_mbps}Mbps" if iface.speed_mbps else ""
-                rx = f"  rx={iface.rx_bytes/1e6:.1f}MB" if iface.rx_bytes is not None else ""
-                tx = f"  tx={iface.tx_bytes/1e6:.1f}MB" if iface.tx_bytes is not None else ""
+                rx = f"  rx={iface.rx_bytes / 1e6:.1f}MB" if iface.rx_bytes is not None else ""
+                tx = f"  tx={iface.tx_bytes / 1e6:.1f}MB" if iface.tx_bytes is not None else ""
                 err_parts = []
                 if iface.rx_errors:
                     err_parts.append(f"rx_err={iface.rx_errors}")
@@ -305,7 +305,7 @@ async def main() -> None:
         results.append(result)
 
     bulk_ms = round((_time.perf_counter() - t_bulk_start) * 1000)
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Bulk completed: {len(results)} camera(s)  total={bulk_ms}ms")
     for r in results:
         t = r.telemetry
@@ -313,7 +313,7 @@ async def main() -> None:
             print(
                 f"  {r.name}: {t.wall_ms}ms  cpu={t.cpu_ms}ms  threads={t.threads_at_start}→{t.threads_at_end}"
             )
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     print(f"\nLog written to: {SETTINGS.log_file}")
 
 

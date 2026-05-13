@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from ipcam_checker.models import (
     CameraConfig,
     CameraResult,
@@ -30,12 +31,16 @@ def test_ping_result_ok():
 
 
 def test_ping_result_fail():
-    r = PingResult(ok=False, latency_ms=None, jitter_ms=None, packet_loss_percent=None, error="timeout")
+    r = PingResult(
+        ok=False, latency_ms=None, jitter_ms=None, packet_loss_percent=None, error="timeout"
+    )
     assert r.ok is False
 
 
 def test_stream_result_ok():
-    r = StreamResult(ok=True, width=1920, height=1080, fps=25.0, codec="h264", bitrate_kbps=2048.0, error=None)
+    r = StreamResult(
+        ok=True, width=1920, height=1080, fps=25.0, codec="h264", bitrate_kbps=2048.0, error=None
+    )
     assert r.width == 1920
 
 
@@ -43,8 +48,10 @@ def test_camera_result_json_serializable():
     result = CameraResult(
         name="Cam1",
         ip="10.0.0.1",
-        checked_at=datetime.now(timezone.utc),
-        ping=PingResult(ok=False, latency_ms=None, jitter_ms=None, packet_loss_percent=None, error="timeout"),
+        checked_at=datetime.now(UTC),
+        ping=PingResult(
+            ok=False, latency_ms=None, jitter_ms=None, packet_loss_percent=None, error="timeout"
+        ),
         main_stream=None,
         sub_stream=None,
         snapshot_base64=None,
@@ -55,6 +62,7 @@ def test_camera_result_json_serializable():
 
 
 # ── Per-camera override fields ────────────────────────────────────────────────
+
 
 def test_camera_config_override_defaults_are_none():
     cam = CameraConfig(name="X", ip="1.2.3.4")
@@ -74,6 +82,7 @@ def test_camera_config_override_explicit():
 
 
 # ── Telemetry models ──────────────────────────────────────────────────────────
+
 
 def test_check_timing():
     t = CheckTiming(name="ping", wall_ms=45.1, cpu_ms=0.8)
@@ -113,6 +122,7 @@ def test_telemetry_model_dump():
 
 
 # ── Discovery models ──────────────────────────────────────────────────────────
+
 
 def test_discovered_device_likely_camera_port_554():
     d = DiscoveredDevice(ip="192.168.1.10", open_ports=[80, 554])

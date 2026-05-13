@@ -1,10 +1,6 @@
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
-from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
-
 from ipcam_checker.checker import _effective, check_camera, check_cameras
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig, CameraResult, PingResult, StreamResult
@@ -16,11 +12,15 @@ def make_ping_ok():
 
 
 def make_ping_fail():
-    return PingResult(ok=False, latency_ms=None, jitter_ms=None, packet_loss_percent=100.0, error="timeout")
+    return PingResult(
+        ok=False, latency_ms=None, jitter_ms=None, packet_loss_percent=100.0, error="timeout"
+    )
 
 
 def make_stream_ok():
-    return StreamResult(ok=True, width=1920, height=1080, fps=25.0, codec="h264", bitrate_kbps=2048.0, error=None)
+    return StreamResult(
+        ok=True, width=1920, height=1080, fps=25.0, codec="h264", bitrate_kbps=2048.0, error=None
+    )
 
 
 @pytest.fixture
@@ -40,9 +40,11 @@ def camera():
 @pytest.mark.asyncio
 async def test_full_flow_ping_ok(camera):
     settings = Settings()
-    with patch("ipcam_checker.checker.check_ping", return_value=make_ping_ok()), \
-         patch("ipcam_checker.checker.check_rtsp", return_value=make_stream_ok()), \
-         patch("ipcam_checker.checker.check_snapshot", return_value="base64data"):
+    with (
+        patch("ipcam_checker.checker.check_ping", return_value=make_ping_ok()),
+        patch("ipcam_checker.checker.check_rtsp", return_value=make_stream_ok()),
+        patch("ipcam_checker.checker.check_snapshot", return_value="base64data"),
+    ):
         result = await check_camera(camera, settings)
     assert result.ping.ok is True
     assert result.main_stream.ok is True
@@ -53,9 +55,11 @@ async def test_full_flow_ping_ok(camera):
 @pytest.mark.asyncio
 async def test_ping_fail_skips_streams(camera):
     settings = Settings()
-    with patch("ipcam_checker.checker.check_ping", return_value=make_ping_fail()), \
-         patch("ipcam_checker.checker.check_rtsp") as mock_rtsp, \
-         patch("ipcam_checker.checker.check_snapshot") as mock_snap:
+    with (
+        patch("ipcam_checker.checker.check_ping", return_value=make_ping_fail()),
+        patch("ipcam_checker.checker.check_rtsp") as mock_rtsp,
+        patch("ipcam_checker.checker.check_snapshot") as mock_snap,
+    ):
         result = await check_camera(camera, settings)
     assert result.ping.ok is False
     assert result.main_stream is None
@@ -78,9 +82,11 @@ async def test_plugins_called_after_streams(camera):
             return {"status": "checked"}
 
     plugin = DummyPlugin()
-    with patch("ipcam_checker.checker.check_ping", return_value=make_ping_ok()), \
-         patch("ipcam_checker.checker.check_rtsp", return_value=make_stream_ok()), \
-         patch("ipcam_checker.checker.check_snapshot", return_value=None):
+    with (
+        patch("ipcam_checker.checker.check_ping", return_value=make_ping_ok()),
+        patch("ipcam_checker.checker.check_rtsp", return_value=make_stream_ok()),
+        patch("ipcam_checker.checker.check_snapshot", return_value=None),
+    ):
         result = await check_camera(camera, settings, plugins=[plugin])
     assert result.plugin_results == {"dummy": {"status": "checked"}}
     assert plugin.called_with_result is not None
@@ -88,6 +94,7 @@ async def test_plugins_called_after_streams(camera):
 
 
 # ── _effective helper ─────────────────────────────────────────────────────────
+
 
 def test_effective_none_inherits_true():
     assert _effective(None, True) is True
@@ -107,12 +114,15 @@ def test_effective_false_overrides_true():
 
 # ── Telemetry ──────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_telemetry_present_on_result(camera):
     settings = Settings()
-    with patch("ipcam_checker.checker.check_ping", return_value=make_ping_ok()), \
-         patch("ipcam_checker.checker.check_rtsp", return_value=make_stream_ok()), \
-         patch("ipcam_checker.checker.check_snapshot", return_value=None):
+    with (
+        patch("ipcam_checker.checker.check_ping", return_value=make_ping_ok()),
+        patch("ipcam_checker.checker.check_rtsp", return_value=make_stream_ok()),
+        patch("ipcam_checker.checker.check_snapshot", return_value=None),
+    ):
         result = await check_camera(camera, settings)
     assert result.telemetry is not None
     assert result.telemetry.wall_ms >= 0
@@ -130,12 +140,11 @@ async def test_telemetry_contains_ping_timing(camera):
 
 # ── Per-camera override wiring ─────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_per_camera_ping_disabled_overrides_global(camera):
     """check_ping=False on camera must suppress ping even when global flag is True."""
-    camera_no_ping = CameraConfig(
-        name="NoPing", ip="192.168.1.200", check_ping=False
-    )
+    camera_no_ping = CameraConfig(name="NoPing", ip="192.168.1.200", check_ping=False)
     settings = Settings(check_ping_enabled=True)
     with patch("ipcam_checker.checker.check_ping") as mock_ping:
         result = await check_camera(camera_no_ping, settings)
@@ -146,9 +155,7 @@ async def test_per_camera_ping_disabled_overrides_global(camera):
 @pytest.mark.asyncio
 async def test_per_camera_ping_forced_on_overrides_global():
     """check_ping=True on camera must run ping even when global flag is False."""
-    camera_force_ping = CameraConfig(
-        name="ForcePing", ip="192.168.1.201", check_ping=True
-    )
+    camera_force_ping = CameraConfig(name="ForcePing", ip="192.168.1.201", check_ping=True)
     settings = Settings(check_ping_enabled=False)
     with patch("ipcam_checker.checker.check_ping", return_value=make_ping_ok()) as mock_ping:
         result = await check_camera(camera_force_ping, settings)
