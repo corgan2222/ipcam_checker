@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from ipcam_checker.checks.check_ping import check_ping
 from ipcam_checker.config import Settings
 

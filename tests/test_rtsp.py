@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from ipcam_checker.checks.check_rtsp import check_rtsp
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig

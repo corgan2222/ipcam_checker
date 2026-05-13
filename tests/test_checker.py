@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+
 from ipcam_checker.checker import _effective, check_camera, check_cameras
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig, CameraResult, PingResult, StreamResult

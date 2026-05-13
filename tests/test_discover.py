@@ -6,6 +6,7 @@ import ipaddress
 from unittest.mock import patch
 
 import pytest
+
 from ipcam_checker.discover import _scan_subnet, _tcp_open, discover_cameras
 from ipcam_checker.models import DiscoveredDevice, MdnsService
 

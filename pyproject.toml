@@ -50,5 +50,8 @@ target-version = "py313"
 select = ["E", "F", "W", "I", "UP"]
 ignore = ["E501"]   # line-too-long handled by formatter
 
+[tool.ruff.lint.isort]
+known-first-party = ["ipcam_checker"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]  # allow assert in tests

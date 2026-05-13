@@ -5,10 +5,11 @@ from concurrent.futures import ThreadPoolExecutor
 import httpx
 import pytest
 import respx
+from PIL import Image
+
 from ipcam_checker.checks.check_snapshot import check_snapshot
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig
-from PIL import Image
 
 
 def _make_jpeg_bytes(width: int = 1920, height: int = 1080) -> bytes:
