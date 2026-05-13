@@ -1,8 +1,15 @@
 # ipcam-checker
 
+<table>
+<tr>
+<td><img src="assets/logo_256.png" width="180" alt="ipcam-checker logo"></td>
+<td>
 Async IP camera health checker for Python 3.13+.
 
 Checks ping, RTSP streams, snapshots, open ports, ONVIF device info, VAPIX sensors/heaters, and SNMP metrics. Discovers cameras on a subnet via mDNS (Bonjour) and TCP port scan. Includes a telemetry system that tracks per-check wall time, CPU time, and thread counts.
+</td>
+</tr>
+</table>
 
 ---
 
