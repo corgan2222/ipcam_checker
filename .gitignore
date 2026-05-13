@@ -7,6 +7,7 @@ bin/ffprobe*
 bin/ffplay*
 dist/
 *.egg-info/
+src/ipcam_checker/_version.py
 __pycache__/
 .venv/
 .pytest_cache/
