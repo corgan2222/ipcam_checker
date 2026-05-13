@@ -44,6 +44,15 @@ def setup_logging(
     if loki_url:
         _add_loki(root, loki_url, loki_labels or {})
 
+    # Prevent third-party loggers (httpx, etc.) from leaking to the root logger's
+    # default stdout handler. Redirect them to our file handler only.
+    for _noisy in ("httpx", "httpcore"):
+        lg = logging.getLogger(_noisy)
+        lg.propagate = False
+        lg.handlers.clear()
+        if log_file:
+            _add_file(lg, Path(log_file), json_file)
+
 
 def _add_console(logger: logging.Logger) -> None:
     h = logging.StreamHandler(sys.stderr)
