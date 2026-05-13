@@ -6,13 +6,16 @@ from pathlib import Path
 from ipcam_checker import CameraConfig, Settings, check_cameras, setup_logging
 
 CAMERAS = [
-    # CameraConfig(
-    #     name="Sony-182",
-    #     ip="192.168.2.182",
-    #     rtsp_port=554,
-    #     rtsp_url_main="/media/video1",
-    #     rtsp_url_sub="/media/video2",
-    # ),
+    CameraConfig(
+        name="Sony-182",
+        ip="192.168.2.182",
+        rtsp_port=554,
+        rtsp_url_main="/media/video1",
+        rtsp_url_sub="/media/video2",
+        check_onvif=True,
+        check_vapix=False,
+        check_snmp="False",
+    ),
     # CameraConfig(
     #     name="Sony-184",
     #     ip="192.168.2.184",
@@ -36,9 +39,11 @@ CAMERAS = [
         onvif_password="REDACTED",
         vapix_username="axisuser",
         vapix_password="REDACTED",
-        check_vapix=False,
+        check_onvif=True,
+        check_vapix=True,
         check_snmp="Axis",
-        snmp_community_read="public"
+        snmp_community_read="public",
+        snapshot_url="https://192.168.2.170/jpg/image.jpg"
     )#,
     # CameraConfig(
     #     name="ReoLinkFront",
@@ -63,10 +68,10 @@ CAMERAS = [
 
 SETTINGS = Settings(
     check_ping_enabled=True,
-    check_rtsp_enabled=False,
-    check_snapshot_enabled=False,
+    check_rtsp_enabled=True,
+    check_snapshot_enabled=True,
     check_ports_enabled=True,
-    check_onvif_enabled=False,
+    check_onvif_enabled=True,
     check_vapix_enabled=True,
     check_snmp_enabled=True,
     ping_count=2,
@@ -232,19 +237,40 @@ def _fmt(result) -> str:
                 errs = ("  " + "  ".join(err_parts)) if err_parts else ""
                 lines.append(f"           iface: {iface.name or iface.index}{spd}{rx}{tx}{errs}")
 
+    t = result.telemetry
+    if t:
+        lines.append(f"  timing:  camera={t.wall_ms}ms  cpu={t.cpu_ms}ms"
+                     f"  threads={t.threads_at_start}→{t.threads_at_end}")
+        for c in t.checks:
+            cpu = f"  cpu={c.cpu_ms}ms" if c.cpu_ms is not None else ""
+            lines.append(f"           {c.name:<12} wall={c.wall_ms}ms{cpu}")
+
     return "\n".join(lines)
 
 
 async def main() -> None:
+    import time as _time
     setup_logging(
         level=SETTINGS.log_level,
         log_file=SETTINGS.log_file,
     )
 
+    t_bulk_start = _time.perf_counter()
+    results = []
+
     print(f"Checking {len(CAMERAS)} cameras...\n")
     async for result in check_cameras(CAMERAS, SETTINGS):
         print(_fmt(result))
+        results.append(result)
 
+    bulk_ms = round((_time.perf_counter() - t_bulk_start) * 1000)
+    print(f"\n{'='*50}")
+    print(f"  Bulk completed: {len(results)} camera(s)  total={bulk_ms}ms")
+    for r in results:
+        t = r.telemetry
+        if t:
+            print(f"  {r.name}: {t.wall_ms}ms  cpu={t.cpu_ms}ms  threads={t.threads_at_start}→{t.threads_at_end}")
+    print(f"{'='*50}")
     print(f"\nLog written to: {SETTINGS.log_file}")
 
 

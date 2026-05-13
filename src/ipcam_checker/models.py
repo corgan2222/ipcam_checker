@@ -168,6 +168,22 @@ class OnvifResult(BaseModel):
     error: str | None = None
 
 
+class CheckTiming(BaseModel):
+    name: str           # "ping", "rtsp_main", "rtsp_sub", "snapshot", "ports", "onvif", "vapix", "snmp"
+    wall_ms: float
+    # process_time() delta — accurate for blocking (ThreadPoolExecutor) checks;
+    # approximate for pure-async checks because other coroutines run concurrently.
+    cpu_ms: float | None = None
+
+
+class CameraTelemetry(BaseModel):
+    wall_ms: float
+    cpu_ms: float | None = None
+    checks: list[CheckTiming] = Field(default_factory=list)
+    threads_at_start: int | None = None   # threading.active_count() before checks
+    threads_at_end: int | None = None     # threading.active_count() after checks
+
+
 class CameraResult(BaseModel):
     name: str
     ip: str
@@ -181,3 +197,4 @@ class CameraResult(BaseModel):
     vapix_result: VapixResult | None = None
     snmp_result: SnmpResult | None = None
     plugin_results: dict[str, Any]
+    telemetry: CameraTelemetry | None = None

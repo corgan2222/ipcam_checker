@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -15,7 +16,13 @@ from ipcam_checker.checks.check_ports import scan_ports
 from ipcam_checker.checks.check_rtsp import check_rtsp
 from ipcam_checker.checks.check_snapshot import check_snapshot
 from ipcam_checker.config import Settings
-from ipcam_checker.models import CameraConfig, CameraResult, PingResult
+from ipcam_checker.models import (
+    CameraConfig,
+    CameraResult,
+    CameraTelemetry,
+    CheckTiming,
+    PingResult,
+)
 from ipcam_checker.plugins.base import AbstractPlugin
 
 _log = get_logger("checker")
@@ -30,6 +37,19 @@ def _effective(camera_override: bool | None, global_enabled: bool) -> bool:
     return camera_override if camera_override is not None else global_enabled
 
 
+async def _timed(name: str, coro, timings: list[CheckTiming]):
+    """Wrap a coroutine and record wall + CPU time into *timings*."""
+    t0_wall = time.perf_counter()
+    t0_cpu  = time.process_time()
+    result  = await coro
+    timings.append(CheckTiming(
+        name=name,
+        wall_ms=round((time.perf_counter() - t0_wall) * 1000, 1),
+        cpu_ms =round((time.process_time()  - t0_cpu)  * 1000, 1),
+    ))
+    return result
+
+
 async def check_camera(
     camera: CameraConfig,
     settings: Settings | None = None,
@@ -40,12 +60,17 @@ async def check_camera(
     if plugins is None:
         plugins = []
 
-    t0 = time.perf_counter()
+    t0_wall = time.perf_counter()
+    t0_cpu  = time.process_time()
     _log.info("camera.start", extra={"camera": camera.name, "ip": camera.ip})
 
+    timings: list[CheckTiming] = []
+
     with ThreadPoolExecutor(max_workers=settings.thread_pool_size) as executor:
+        threads_at_start = threading.active_count()
+
         ping = (
-            await check_ping(camera.ip, settings, executor)
+            await _timed("ping", check_ping(camera.ip, settings, executor), timings)
             if _effective(camera.check_ping, settings.check_ping_enabled) else None
         )
 
@@ -66,40 +91,36 @@ async def check_camera(
             do_onvif    = _effective(camera.check_onvif,    settings.check_onvif_enabled)
             do_vapix    = _effective(camera.check_vapix,    settings.check_vapix_enabled)
 
-            # SNMP: camera.check_snmp is a str | None
-            #   None  → inherit global (treat as "Axis" if check_snmp_enabled, else None)
-            #   "Axis" → always use Axis implementation
-            #   "" / any other falsy str → disabled
             snmp_impl = camera.check_snmp
             if snmp_impl is None:
                 snmp_impl = "Axis" if settings.check_snmp_enabled else None
 
             main_coro = (
-                check_rtsp(camera, camera.rtsp_url_main, settings, executor)
+                _timed("rtsp_main", check_rtsp(camera, camera.rtsp_url_main, settings, executor), timings)
                 if (do_rtsp and camera.rtsp_url_main) else _resolved(None)
             )
             sub_coro = (
-                check_rtsp(camera, camera.rtsp_url_sub, settings, executor)
+                _timed("rtsp_sub", check_rtsp(camera, camera.rtsp_url_sub, settings, executor), timings)
                 if (do_rtsp and camera.rtsp_url_sub) else _resolved(None)
             )
             snap_coro = (
-                check_snapshot(camera, settings, executor)
+                _timed("snapshot", check_snapshot(camera, settings, executor), timings)
                 if do_snapshot else _resolved(None)
             )
             port_coro = (
-                scan_ports(camera.ip, settings)
+                _timed("ports", scan_ports(camera.ip, settings), timings)
                 if do_ports else _resolved([])
             )
             onvif_coro = (
-                check_onvif(camera, settings, executor)
+                _timed("onvif", check_onvif(camera, settings, executor), timings)
                 if do_onvif else _resolved(None)
             )
             vapix_coro = (
-                check_vapix(camera, settings)
+                _timed("vapix", check_vapix(camera, settings), timings)
                 if do_vapix else _resolved(None)
             )
             snmp_coro = (
-                check_snmp_axis(camera, settings)
+                _timed("snmp", check_snmp_axis(camera, settings), timings)
                 if snmp_impl == "Axis" else _resolved(None)
             )
 
@@ -112,40 +133,54 @@ async def check_camera(
                 extra={"camera": camera.name, "ip": camera.ip, "reason": "ping failed"},
             )
 
-        result = CameraResult(
-            name=camera.name,
-            ip=camera.ip,
-            checked_at=datetime.now(timezone.utc),
-            ping=ping,
-            main_stream=main_stream,
-            sub_stream=sub_stream,
-            snapshot_base64=snapshot_base64,
-            port_results=port_results,
-            onvif_result=onvif_result,
-            vapix_result=vapix_result,
-            snmp_result=snmp_result,
-            plugin_results={},
-        )
+        threads_at_end = threading.active_count()
 
-        if plugins and run_checks:
-            plugin_tasks = [
-                asyncio.create_task(_run_plugin(p, camera, result, executor, settings))
-                for p in plugins
-            ]
-            plugin_outputs = await asyncio.gather(*plugin_tasks, return_exceptions=True)
-            for plugin, output in zip(plugins, plugin_outputs):
-                if isinstance(output, Exception):
-                    _log.error(
-                        "plugin.exception",
-                        extra={"camera": camera.name, "ip": camera.ip,
-                               "plugin": plugin.name, "error": str(output)},
-                        exc_info=output,
-                    )
-                    result.plugin_results[plugin.name] = {"error": str(output)}
-                else:
-                    result.plugin_results[plugin.name] = output
+    wall_ms = round((time.perf_counter() - t0_wall) * 1000, 1)
+    cpu_ms  = round((time.process_time()  - t0_cpu)  * 1000, 1)
 
-    duration_ms = round((time.perf_counter() - t0) * 1000)
+    telemetry = CameraTelemetry(
+        wall_ms=wall_ms,
+        cpu_ms=cpu_ms,
+        checks=timings,
+        threads_at_start=threads_at_start,
+        threads_at_end=threads_at_end,
+    )
+
+    result = CameraResult(
+        name=camera.name,
+        ip=camera.ip,
+        checked_at=datetime.now(timezone.utc),
+        ping=ping,
+        main_stream=main_stream,
+        sub_stream=sub_stream,
+        snapshot_base64=snapshot_base64,
+        port_results=port_results,
+        onvif_result=onvif_result,
+        vapix_result=vapix_result,
+        snmp_result=snmp_result,
+        plugin_results={},
+        telemetry=telemetry,
+    )
+
+    if plugins and run_checks:
+        plugin_tasks = [
+            asyncio.create_task(_run_plugin(p, camera, result, executor, settings))
+            for p in plugins
+        ]
+        plugin_outputs = await asyncio.gather(*plugin_tasks, return_exceptions=True)
+        for plugin, output in zip(plugins, plugin_outputs):
+            if isinstance(output, Exception):
+                _log.error(
+                    "plugin.exception",
+                    extra={"camera": camera.name, "ip": camera.ip,
+                           "plugin": plugin.name, "error": str(output)},
+                    exc_info=output,
+                )
+                result.plugin_results[plugin.name] = {"error": str(output)}
+            else:
+                result.plugin_results[plugin.name] = output
+
+    duration_ms = round((time.perf_counter() - t0_wall) * 1000)
     _log.info(
         "camera.done",
         extra={
