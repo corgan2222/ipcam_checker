@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ipcam_checker.checks.ping import check_ping
+from ipcam_checker.checks.check_ping import check_ping
 from ipcam_checker.config import Settings
 
 
@@ -21,7 +21,7 @@ def _mock_host(*, is_alive, avg_rtt, jitter, packet_loss, packets_received):
 async def test_ping_ok():
     settings = Settings(ping_count=4, ping_timeout_s=2.0)
     host = _mock_host(is_alive=True, avg_rtt=1.5, jitter=0.5, packet_loss=0.0, packets_received=4)
-    with patch("ipcam_checker.checks.ping.async_ping", new=AsyncMock(return_value=host)):
+    with patch("ipcam_checker.checks.check_ping.async_ping", new=AsyncMock(return_value=host)):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_ping("192.168.1.1", settings, executor)
     assert result.ok is True
@@ -35,7 +35,7 @@ async def test_ping_ok():
 async def test_ping_partial_loss():
     settings = Settings(ping_count=4, ping_timeout_s=2.0)
     host = _mock_host(is_alive=True, avg_rtt=1.0, jitter=0.0, packet_loss=0.5, packets_received=2)
-    with patch("ipcam_checker.checks.ping.async_ping", new=AsyncMock(return_value=host)):
+    with patch("ipcam_checker.checks.check_ping.async_ping", new=AsyncMock(return_value=host)):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_ping("192.168.1.1", settings, executor)
     assert result.ok is True
@@ -47,7 +47,7 @@ async def test_ping_partial_loss():
 async def test_ping_fail():
     settings = Settings(ping_count=4, ping_timeout_s=2.0)
     host = _mock_host(is_alive=False, avg_rtt=0.0, jitter=0.0, packet_loss=1.0, packets_received=0)
-    with patch("ipcam_checker.checks.ping.async_ping", new=AsyncMock(return_value=host)):
+    with patch("ipcam_checker.checks.check_ping.async_ping", new=AsyncMock(return_value=host)):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_ping("192.168.1.1", settings, executor)
     assert result.ok is False
@@ -58,7 +58,7 @@ async def test_ping_fail():
 @pytest.mark.asyncio
 async def test_ping_exception():
     settings = Settings()
-    with patch("ipcam_checker.checks.ping.async_ping", new=AsyncMock(side_effect=OSError("socket error"))):
+    with patch("ipcam_checker.checks.check_ping.async_ping", new=AsyncMock(side_effect=OSError("socket error"))):
         with ThreadPoolExecutor(max_workers=2) as executor:
             result = await check_ping("192.168.1.1", settings, executor)
     assert result.ok is False

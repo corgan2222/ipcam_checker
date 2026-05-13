@@ -7,7 +7,7 @@ import respx
 import httpx
 from PIL import Image
 
-from ipcam_checker.checks.snapshot import check_snapshot
+from ipcam_checker.checks.check_snapshot import check_snapshot
 from ipcam_checker.config import Settings
 from ipcam_checker.models import CameraConfig
 

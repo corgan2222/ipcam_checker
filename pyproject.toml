@@ -23,6 +23,7 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "respx>=0.21",
+    "ruff>=0.4",
 ]
 loki = [
     "python-logging-loki>=0.3",
@@ -39,3 +40,14 @@ packages = ["src/ipcam_checker"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]   # line-too-long handled by formatter
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # allow assert in tests
