@@ -11,10 +11,42 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - uses: actions/checkout@v4
-      - uses: micnncim/action-label-syncer@v1
+
+      - name: Sync labels
+        run: |
+          python3 - <<'EOF'
+          import yaml, subprocess, sys
+
+          with open(".github/labels.yml") as f:
+              labels = yaml.safe_load(f)
+
+          errors = []
+          for label in labels:
+              name = label["name"]
+              color = label["color"].lstrip("#")
+              description = label.get("description", "")
+              result = subprocess.run(
+                  ["gh", "label", "create", name,
+                   "--color", color,
+                   "--description", description,
+                   "--force"],
+                  capture_output=True, text=True
+              )
+              if result.returncode == 0:
+                  print(f"✓ {name}")
+              else:
+                  print(f"✗ {name}: {result.stderr.strip()}", file=sys.stderr)
+                  errors.append(name)
+
+          if errors:
+              print(f"\nFailed: {errors}", file=sys.stderr)
+              sys.exit(1)
+          else:
+              print(f"\nSynced {len(labels)} labels.")
+          EOF
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          manifest: .github/labels.yml
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
